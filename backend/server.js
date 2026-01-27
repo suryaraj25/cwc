@@ -37,7 +37,9 @@ fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
 const start = async () => {
     try {
         await connectDB();
-        await fastify.listen({ port: process.env.PORT || 5000 });
+        await fastify.listen({ port: process.env.PORT || 5000,
+            host: '0.0.0.0'
+         });
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);
