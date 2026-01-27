@@ -1,6 +1,6 @@
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://cwc-b4ir.onrender.com/api';
 const DEVICE_ID_KEY = 'cwc_voting_device_id';
 
 export const getThisDeviceId = (): string => {
