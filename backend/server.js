@@ -1,4 +1,6 @@
 const fastify = require('fastify')({ logger: true });
+const path = require("path");
+const fastifyStatic = require("@fastify/static");
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -6,6 +8,15 @@ require('dotenv').config();
 fastify.register(require('@fastify/cors'), {
     origin: '*', // Adjust this for production security
     methods: ['GET', 'POST', 'PUT', 'DELETE']
+});
+
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, "../frontend/dist"),
+  prefix: "/",
+});
+
+fastify.get("/", async (req, reply) => {
+  return reply.sendFile("index.html");
 });
 
 // Database Connection
