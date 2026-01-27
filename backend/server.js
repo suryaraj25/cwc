@@ -34,7 +34,7 @@ const connectDB = async () => {
 };
 
 // Basic Route
-fastify.get('/', async (request, reply) => {
+fastify.get('/api', async (request, reply) => {
     return { hello: 'world' };
 });
 
