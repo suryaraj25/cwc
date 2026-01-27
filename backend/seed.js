@@ -8,8 +8,8 @@ const seedAdmin = async () => {
         console.log('MongoDB Connected for Seeding');
 
         const adminDetails = {
-            username: 'BITADMIN',
-            passwordHash: 'cwc2024'
+            username: 'BITADMIN2026',
+            passwordHash: 'cwc2026'
         };
 
         const existing = await Admin.findOne({ username: adminDetails.username });
