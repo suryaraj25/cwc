@@ -1,0 +1,5 @@
+{
+  "name": "CWC 3.0 Digital Voting System",
+  "description": "A secure, device-locked digital voting platform for CWC 3.0, featuring strict authentication policies, admin controls, and real-time analytics.",
+  "requestFramePermissions": []
+}

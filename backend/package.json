@@ -1,0 +1,19 @@
+{
+    "name": "cwc-voting-backend",
+    "version": "1.0.0",
+    "description": "Backend for CWC Digital Voting System",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "dependencies": {
+        "fastify": "^5.0.0",
+        "@fastify/cors": "^10.0.0",
+        "mongoose": "^8.1.0",
+        "dotenv": "^16.4.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.3"
+    }
+}
