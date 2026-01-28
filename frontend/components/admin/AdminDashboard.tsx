@@ -696,8 +696,8 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="admin-glass rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+              <table className="w-full min-w-[640px]">
                 <thead>
                   <tr className="bg-slate-900/50 border-b border-slate-700">
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -808,9 +808,9 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <form
                 onSubmit={handleSaveTeam}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                className="grid grid-cols-1 gap-6"
               >
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                     Team Name
                   </label>
@@ -824,7 +824,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="e.g. Code Warriors"
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                     Description (Slogan)
                   </label>
@@ -838,7 +838,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="Short catchphrase..."
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                     Image URL
                   </label>
@@ -971,8 +971,8 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Data Table */}
           <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+              <table className="w-full text-left text-sm min-w-[768px]">
                 <thead className="bg-slate-900/50 text-slate-400 font-bold uppercase tracking-wider text-xs border-b border-slate-700">
                   <tr>
                     <th className="p-5 w-10 no-print"></th>

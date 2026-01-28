@@ -242,7 +242,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
       </div>
 
       {/* Floating Action Button */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 z-50">
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-50">
         <Button
           onClick={saveVotes}
           isLoading={saving}
