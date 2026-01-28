@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Admin = require('../models/Admin');
 const VoteTransaction = require('../models/VoteTransaction');
+const bcrypt = require('bcrypt');
 const UserRole = { GUEST: 'GUEST', STUDENT: 'STUDENT', ADMIN: 'ADMIN' }; // Simple enum
 
 async function authRoutes(fastify, options) {
@@ -18,9 +19,11 @@ async function authRoutes(fastify, options) {
             return reply.code(400).send({ success: false, message: 'User with this Email or Roll No already exists.' });
         }
 
-        // 2. Create User
-        // Note: boundDeviceId will be set on first login or explicitly passed
-        const user = new User(userData);
+        // 2. Hash password with bcrypt
+        const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
+
+        // 3. Create User with hashed password
+        const user = new User({ ...userData, passwordHash: hashedPassword });
         await user.save();
 
         return { success: true, message: 'Registration Successful', user };
@@ -31,24 +34,25 @@ async function authRoutes(fastify, options) {
         const { identifier, passwordHash } = request.body;
         const crypto = require('crypto');
 
+        // 1. Find user by identifier (email or rollNo)
         const user = await User.findOne({
-            $or: [{ email: identifier }, { rollNo: identifier }],
-            passwordHash
+            $or: [{ email: identifier }, { rollNo: identifier }]
         });
 
-        if (!user) {
+        // 2. Verify user exists and password is correct
+        if (!user || !(await bcrypt.compare(passwordHash, user.passwordHash))) {
             return reply.code(401).send({ success: false, message: 'Invalid Credentials.' });
         }
 
-        // Single Session Enforcement Logic
+        // 3. Single Session Enforcement Logic
         const sessionToken = crypto.randomUUID(); // Generate new session ID
         user.currentSessionToken = sessionToken;
         await user.save();
 
-        // Sign JWT with payload
+        // 4. Sign JWT with payload
         const token = fastify.jwt.sign({ userId: user._id, sessionToken });
 
-        // Set Cookie
+        // 5. Set Cookie
         reply.setCookie('cwc_voting_token', token, {
             path: '/',
             httpOnly: true,
@@ -64,22 +68,23 @@ async function authRoutes(fastify, options) {
         const { username, password } = request.body;
         const crypto = require('crypto');
 
-        // Simple direct match for demo. In prod, compare hashes.
-        const admin = await Admin.findOne({ username, passwordHash: password });
+        // 1. Find admin by username
+        const admin = await Admin.findOne({ username });
 
-        if (!admin) {
+        // 2. Verify admin exists and password is correct
+        if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
             return reply.code(401).send({ success: false, message: 'Invalid Admin Credentials.' });
         }
 
-        // Single Session Enforcement Logic
+        // 3. Single Session Enforcement Logic
         const sessionToken = crypto.randomUUID(); // Generate new session ID
         admin.currentSessionToken = sessionToken;
         await admin.save();
 
-        // Sign JWT with payload
+        // 4. Sign JWT with payload
         const token = fastify.jwt.sign({ adminId: admin.username, sessionToken });
 
-        // Set Cookie
+        // 5. Set Cookie
         reply.setCookie('cwc_admin_token', token, {
             path: '/',
             httpOnly: true,

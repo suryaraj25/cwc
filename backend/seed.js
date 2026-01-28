@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Admin = require('./models/Admin');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const seedAdmin = async () => {
@@ -7,19 +8,23 @@ const seedAdmin = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB Connected for Seeding');
 
-        const adminDetails = {
-            username: 'BITADMIN2026',
-            passwordHash: 'cwc2026'
-        };
+        const adminPassword = 'server';
 
-        const existing = await Admin.findOne({ username: adminDetails.username });
+        const existing = await Admin.findOne({ username: 'BITADMIN2026' });
         if (existing) {
             console.log('Admin already exists');
         } else {
-            await Admin.create(adminDetails);
+            // Hash password before storing
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+            await Admin.create({
+                username: 'BITADMIN2026',
+                passwordHash: hashedPassword
+            });
+
             console.log('Admin created successfully');
-            console.log('Username:', adminDetails.username);
-            console.log('Password:', adminDetails.passwordHash);
+            console.log('Username: BITADMIN2026');
+            console.log('Password:', adminPassword, '(hashed in DB)');
         }
 
         mongoose.connection.close();

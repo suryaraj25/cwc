@@ -9,6 +9,21 @@ const apiClient = axios.create({
     withCredentials: true // send cookies with requests
 });
 
+// Add response interceptor to handle unauthorized errors globally
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            // User is unauthorized - redirect to home
+            // Only redirect if not already on auth pages
+            if (!window.location.pathname.includes('/auth') && window.location.pathname !== '/') {
+                window.location.href = '/';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export const api = {
     // Auth
     register: async (userData: any): Promise<{ success: boolean; message: string; user?: User }> => {
