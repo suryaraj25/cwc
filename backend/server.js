@@ -72,6 +72,30 @@ fastify.decorate("authenticate", async function (request, reply) {
     }
 });
 
+// Admin Auth Decorator
+fastify.decorate("authenticateAdmin", async function (request, reply) {
+    try {
+        const token = request.cookies.cwc_admin_token;
+        if (!token) {
+            return reply.code(401).send({ success: false, message: 'Unauthorized: No Admin Token' });
+        }
+
+        const decoded = fastify.jwt.verify(token);
+        const { adminId, sessionToken } = decoded;
+
+        const Admin = require('./models/Admin');
+        const admin = await Admin.findOne({ username: adminId });
+
+        if (!admin || admin.currentSessionToken !== sessionToken) {
+            return reply.code(401).send({ success: false, message: 'Session Expired: Logged in on another device.' });
+        }
+
+        request.authAdmin = admin;
+    } catch (err) {
+        reply.code(401).send({ success: false, message: 'Unauthorized: Invalid Admin Token' });
+    }
+});
+
 // Database Connection
 const connectDB = async () => {
     try {

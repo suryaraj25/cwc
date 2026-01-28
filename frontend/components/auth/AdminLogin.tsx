@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
-import { api } from '../../services/api';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
-import { ShieldCheck, LockKeyhole } from 'lucide-react';
+import React, { useState } from "react";
+import { api } from "../../services/api";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
+import { Input } from "../ui/Input";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import { ShieldCheck, LockKeyhole } from "lucide-react";
 
-interface AdminLoginProps {
-  onLoginSuccess: (adminId: string) => void;
-}
+interface AdminLoginProps {}
 
-export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export const AdminLogin: React.FC<AdminLoginProps> = () => {
+  const { adminLogin } = useAuthStore();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -20,17 +22,18 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     try {
       const result = await api.adminLogin(username, password);
       if (result.success && result.adminId) {
-        onLoginSuccess(result.adminId);
+        adminLogin(result.adminId);
+        navigate("/admin");
       } else {
         setError(result.message);
       }
     } catch (e) {
-      setError('Connection failed');
+      setError("Connection failed");
     }
   };
 
   return (
-    <div className="max-w-sm w-full mx-auto">
+    <div className="max-w-sm w-full mx-auto animate-fade-in-up">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4 ring-2 ring-red-500/50">
           <ShieldCheck className="w-8 h-8 text-red-500" />
@@ -41,7 +44,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
 
       <Card className="border-t-4 border-t-red-500">
         <form onSubmit={handleLogin}>
-          {error && <p className="text-red-500 text-sm mb-4 text-center bg-red-500/10 p-2 rounded">{error}</p>}
+          {error && (
+            <p className="text-red-500 text-sm mb-4 text-center bg-red-500/10 p-2 rounded">
+              {error}
+            </p>
+          )}
           <Input
             label="Admin ID"
             value={username}

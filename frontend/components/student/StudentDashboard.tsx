@@ -2,26 +2,22 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import { User, Team, VotingConfig } from "../../types";
 import { api } from "../../services/api";
+import { useAuthStore } from "../../stores/useAuthStore";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
-import {
-  LogOut,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  Lock,
-  Loader2,
-  PartyPopper,
-} from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { LoadingState } from "../ui/LoadingState";
+import { VotingClosedState } from "./VotingClosedState";
+import { TeamVoteCard } from "./TeamVoteCard";
 
-interface StudentDashboardProps {
-  user: User;
-}
+interface StudentDashboardProps {}
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({
-  user: initialUser,
-}) => {
-  const [user, setUser] = useState<User>(initialUser);
+export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
+  const { user: storeUser } = useAuthStore();
+  // We keep local 'user' state to handle data refreshes like 'votesUsedToday' updates without polluting store
+  // OR we can trust the store user if we update store on sync.
+  // For safety, let's init local user from store and update it.
+  const [user, setUser] = useState<User | null>(storeUser);
   const [teams, setTeams] = useState<Team[]>([]);
   const [config, setConfig] = useState<VotingConfig>({
     isVotingOpen: false,
@@ -48,12 +44,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await api.getAdminData();
-        setTeams(data.teams);
-
-        if (data.config) {
-          setConfig(data.config);
-        }
+        // Use public endpoints instead of admin endpoint
+        const [teamsData, configData] = await Promise.all([
+          api.getTeams(),
+          api.getVotingConfig(),
+        ]);
+        setTeams(teamsData);
+        setConfig(configData);
 
         // Use checkSession (calling /me) to get accurate daily usage
         const { user: refreshedUser, votesUsedToday } =
@@ -92,7 +89,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return () => {
       socket.disconnect();
     };
-  }, [user.id]);
+  }, [user?.id]);
 
   const totalCurrentSession = (Object.values(votes) as number[]).reduce(
     (a, b) => a + b,
@@ -129,6 +126,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     setSaving(true);
     try {
+      if (!user) throw new Error("User not found");
       const result = await api.castVote(user.id, votes);
 
       if (result.success) {
@@ -158,38 +156,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-500">
-        <Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" />
-        <p>Syncing voting status...</p>
-      </div>
-    );
+    return <LoadingState message="Syncing voting status..." />;
   }
 
   // 2. Check if window is closed
   if (!config.isVotingOpen) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center text-center p-6 animate-fade-in-up">
-        <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6">
-          <Lock className="w-12 h-12 text-slate-500" />
-        </div>
-        <h2 className="text-3xl font-bold text-white mb-2">
-          Voting Window Closed
-        </h2>
-        <p className="text-slate-400 max-w-md">
-          The voting lines are currently closed. Please wait for the Admin to
-          open the next session.
-        </p>
-        {config.startTime && (
-          <div className="mt-8 p-4 bg-slate-800 rounded-lg border border-slate-700">
-            <p className="text-sm text-slate-400 uppercase tracking-wider">
-              Session Status
-            </p>
-            <p className="text-xl font-mono text-indigo-400 mt-1">LOCKED</p>
-          </div>
-        )}
-      </div>
-    );
+    return <VotingClosedState config={config} />;
   }
 
   // 3. Voting Interface
@@ -201,12 +173,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
               <span className="text-xl font-bold text-indigo-400">
-                {user.name.charAt(0)}
+                {user?.name?.charAt(0)}
               </span>
             </div>
             <div>
-              <h3 className="font-bold text-white">{user.name}</h3>
-              <p className="text-xs text-indigo-300 font-mono">{user.rollNo}</p>
+              <h3 className="font-bold text-white">{user?.name}</h3>
+              <p className="text-xs text-indigo-300 font-mono">
+                {user?.rollNo}
+              </p>
             </div>
           </div>
         </Card>
@@ -256,52 +230,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         {teams.map((team) => {
           const currentVotes = votes[team.id] || 0;
           return (
-            <div
+            <TeamVoteCard
               key={team.id}
-              className="group relative bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-indigo-500 transition-all shadow-xl"
-            >
-              <div className="aspect-video w-full overflow-hidden relative">
-                <img
-                  src={team.imageUrl}
-                  alt={team.name}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-90" />
-                <div className="absolute bottom-4 left-4">
-                  <h3 className="text-xl font-bold text-white">{team.name}</h3>
-                  <p className="text-xs text-slate-300 line-clamp-1">
-                    {team.description}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 flex items-center justify-between bg-slate-900/50 backdrop-blur-sm">
-                <button
-                  onClick={() => handleVoteChange(team.id, -1)}
-                  className="w-10 h-10 rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center text-xl font-bold disabled:opacity-50"
-                  disabled={currentVotes === 0}
-                >
-                  -
-                </button>
-
-                <div className="text-center">
-                  <span className="text-3xl font-bold text-white font-mono">
-                    {currentVotes}
-                  </span>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-                    Votes
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleVoteChange(team.id, 1)}
-                  className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center text-xl font-bold disabled:opacity-50 disabled:bg-slate-700"
-                  disabled={remaining === 0}
-                >
-                  +
-                </button>
-              </div>
-            </div>
+              team={team}
+              currentVotes={currentVotes}
+              handleVoteChange={handleVoteChange}
+              remaining={remaining}
+            />
           );
         })}
       </div>

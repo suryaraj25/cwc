@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
@@ -83,7 +83,13 @@ export const api = {
         await apiClient.delete(`/teams/${id}`);
     },
 
+
     // Voting
+    getVotingConfig: async (): Promise<VotingConfig> => {
+        const res = await apiClient.get(`/voting/config`);
+        return res.data;
+    },
+
     castVote: async (userId: string, votes: Record<string, number>): Promise<{ success: boolean; message: string }> => {
         const res = await apiClient.post(`/voting/cast`, { userId, votes });
         return res.data;
@@ -102,6 +108,11 @@ export const api = {
 
     revokeDevice: async (userId: string): Promise<{ success: boolean }> => {
         const res = await apiClient.post(`/admin/revoke-device`, { userId });
+        return res.data;
+    },
+
+    getTransactions: async (): Promise<any[]> => {
+        const res = await apiClient.get(`/admin/transactions`);
         return res.data;
     }
 };

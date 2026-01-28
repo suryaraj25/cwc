@@ -6,7 +6,7 @@ const VoteTransaction = require('../models/VoteTransaction');
 async function adminRoutes(fastify, options) {
 
     // Get Dashboard Data
-    fastify.get('/dashboard', async (request, reply) => {
+    fastify.get('/dashboard', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const users = await User.find();
         const teams = await Team.find();
         const config = await Config.findOne() || new Config();
@@ -37,7 +37,7 @@ async function adminRoutes(fastify, options) {
     });
 
     // Update Config
-    fastify.post('/config', async (request, reply) => {
+    fastify.post('/config', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         let config = await Config.findOne();
         if (!config) config = new Config();
 
@@ -50,7 +50,7 @@ async function adminRoutes(fastify, options) {
     });
 
     // Revoke Device
-    fastify.post('/revoke-device', async (request, reply) => {
+    fastify.post('/revoke-device', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const { userId } = request.body;
         const user = await User.findById(userId);
 
@@ -65,7 +65,7 @@ async function adminRoutes(fastify, options) {
     });
 
     // Get Transactions
-    fastify.get('/transactions', async (request, reply) => {
+    fastify.get('/transactions', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const transactions = await VoteTransaction.find()
             .populate('userId', 'name rollNo dept')
             .populate('teamId', 'name')

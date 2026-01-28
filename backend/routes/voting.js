@@ -3,6 +3,17 @@ const Config = require('../models/Config');
 
 async function votingRoutes(fastify, options) {
 
+    // Get Voting Config (Public - no auth required)
+    fastify.get('/config', async (request, reply) => {
+        const config = await Config.findOne() || new Config();
+        return {
+            isVotingOpen: config.isVotingOpen,
+            startTime: config.startTime,
+            endTime: config.endTime,
+            dailyQuota: config.dailyQuota || 100
+        };
+    });
+
     fastify.post('/cast', { onRequest: [fastify.authenticate] }, async (request, reply) => {
         const { votes } = request.body; // votes: { teamId: count }
         const user = request.authUser; // from authenticate decorator

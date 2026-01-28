@@ -2,25 +2,24 @@ import React, { useState } from "react";
 import { User } from "../../types";
 import { DEPARTMENTS } from "../../constants";
 import { api } from "../../services/api";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { UserPlus, LogIn, Lock, AlertCircle } from "lucide-react";
 
-interface StudentAuthProps {
-  onLoginSuccess: (user: User) => void;
-}
+interface StudentAuthProps {}
 
-const BITS_EMAIL_REGEX =
-  /^[a-z]+(\.[a-z]{2,5}[0-9]{2})@bitsathy\.ac\.in$/;
+const BITS_EMAIL_REGEX = /^[a-z]+(\.[a-z]{2,5}[0-9]{2})@bitsathy\.ac\.in$/;
 
-
-export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
+export const StudentAuth: React.FC<StudentAuthProps> = () => {
+  const { login } = useAuthStore();
+  const navigate = useNavigate();
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
 
   // Form State
   const [formData, setFormData] = useState({
@@ -78,7 +77,8 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
           );
           if (loginResult.success && loginResult.user) {
             localStorage.setItem("cwc_voting_user_id", loginResult.user.id);
-            onLoginSuccess(loginResult.user);
+            login(loginResult.user);
+            navigate("/dashboard");
           } else {
             setError(loginResult.message);
           }
@@ -98,7 +98,8 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
         );
         if (result.success && result.user) {
           localStorage.setItem("cwc_voting_user_id", result.user.id);
-          onLoginSuccess(result.user);
+          login(result.user);
+          navigate("/dashboard");
         } else {
           setError(result.message);
         }
@@ -111,7 +112,7 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="max-w-md w-full mx-auto">
+    <div className="max-w-md w-full mx-auto animate-fade-in-up">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-500/10 mb-4 ring-2 ring-indigo-500/50">
           <Lock className="w-8 h-8 text-indigo-500" />
