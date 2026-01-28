@@ -48,6 +48,7 @@ import { Pagination } from "../ui/Pagination";
 import { Modal, ModalProps } from "../ui/Modal";
 import { toast } from "../../stores/useToastStore";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 // Modern Color Palette for Charts
 const COLORS = [
@@ -63,6 +64,7 @@ const COLORS = [
 ];
 
 export const AdminDashboard: React.FC = () => {
+  const { adminRole } = useAuthStore();
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "teams" | "users" | "settings" | "transactions"
   >("dashboard");
@@ -565,6 +567,7 @@ export const AdminDashboard: React.FC = () => {
         setActiveTab={setActiveTab}
         config={data.config}
         toggleVoting={toggleVoting}
+        userRole={adminRole || "ADMIN"}
       />
 
       {/* --- DASHBOARD TAB --- */}

@@ -18,6 +18,7 @@ interface AdminNavBarProps {
   ) => void;
   config: VotingConfig;
   toggleVoting: () => void;
+  userRole?: string;
 }
 
 export const AdminNavBar: React.FC<AdminNavBarProps> = ({
@@ -25,14 +26,19 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
   setActiveTab,
   config,
   toggleVoting,
+  userRole = "ADMIN",
 }) => {
   const tabs = [
     { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
-    {
-      id: "transactions",
-      icon: FileSpreadsheet,
-      label: "Transactions",
-    },
+    ...(userRole === "SUPER_ADMIN"
+      ? [
+          {
+            id: "transactions",
+            icon: FileSpreadsheet,
+            label: "Transactions",
+          },
+        ]
+      : []),
     { id: "teams", icon: Trophy, label: "Teams" },
     { id: "users", icon: Users, label: "Students" },
     { id: "settings", icon: Clock, label: "Schedule" },

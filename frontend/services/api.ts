@@ -37,7 +37,7 @@ export const api = {
         return res.data;
     },
 
-    adminLogin: async (username: string, password: string): Promise<{ success: boolean; message: string; adminId?: string; admin?: User }> => {
+    adminLogin: async (username: string, password: string): Promise<{ success: boolean; message: string; adminId?: string; role?: string; admin?: User }> => {
         const res = await apiClient.post(`/auth/admin-login`, { username, password });
         return res.data;
     },
@@ -68,6 +68,18 @@ export const api = {
         } catch (error: any) {
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
                 return { user: null };
+            }
+            throw error;
+        }
+    },
+
+    checkAdminSession: async (): Promise<{ success: boolean; adminId?: string; role?: string }> => {
+        try {
+            const res = await apiClient.get(`/auth/admin-me`);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                return { success: false };
             }
             throw error;
         }

@@ -22,7 +22,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = () => {
     try {
       const result = await api.adminLogin(username, password);
       if (result.success && result.adminId) {
-        adminLogin(result.adminId);
+        adminLogin(result.adminId, result.role || "ADMIN");
         navigate("/admin");
       } else {
         setError(result.message);

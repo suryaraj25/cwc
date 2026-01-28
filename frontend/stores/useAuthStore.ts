@@ -4,9 +4,13 @@ import { User, UserRole, AuthState } from '../types';
 import { api } from '../services/api';
 
 interface AuthStore extends AuthState {
+    role: UserRole;
+    user: User | null;
+    adminId: string | null;
+    adminRole: string | null;
     isLoading: boolean;
     login: (user: User) => void;
-    adminLogin: (adminId: string) => void;
+    adminLogin: (adminId: string, role: string) => void;
     logout: () => Promise<void>;
     checkSession: () => Promise<void>;
 }
@@ -17,14 +21,15 @@ export const useAuthStore = create<AuthStore>()(
             role: UserRole.GUEST,
             user: null,
             adminId: null,
+            adminRole: null, // Add adminRole
             isLoading: true, // Start loading by default to prevent premature redirects
 
             login: (user: User) => {
-                set({ role: UserRole.STUDENT, user, adminId: null });
+                set({ role: UserRole.STUDENT, user, adminId: null, adminRole: null });
             },
 
-            adminLogin: (adminId: string) => {
-                set({ role: UserRole.ADMIN, user: null, adminId });
+            adminLogin: (adminId: string, role: string) => {
+                set({ role: UserRole.ADMIN, user: null, adminId, adminRole: role });
             },
 
             logout: async () => {
@@ -40,45 +45,40 @@ export const useAuthStore = create<AuthStore>()(
                 }
 
                 // Clear local state
-                set({ role: UserRole.GUEST, user: null, adminId: null });
+                set({ role: UserRole.GUEST, user: null, adminId: null, adminRole: null });
                 localStorage.removeItem('cwc_voting_user_id');
             },
 
             checkSession: async () => {
                 set({ isLoading: true });
                 const currentRole = get().role;
-                const currentAdminId = get().adminId;
 
                 try {
-                    // If user was an admin, just keep them as admin (since admin uses cookie-based auth)
-                    if (currentRole === UserRole.ADMIN && currentAdminId) {
-                        // Admin session persists via httpOnly cookie, just verify it's still valid
-                        // by keeping the state as-is. The API interceptor will redirect if session expired.
-                        set({ isLoading: false });
-                        return;
+                    // Check Admin Session
+                    if (currentRole === UserRole.ADMIN) {
+                        const { success, role } = await api.checkAdminSession();
+                        if (success) {
+                            // Update role if changed (or set initially if missing)
+                            set({ isLoading: false, adminRole: role });
+                            return;
+                        } else {
+                            // Session invalid, clear state
+                            set({ role: UserRole.GUEST, user: null, adminId: null, adminRole: null, isLoading: false });
+                            return;
+                        }
                     }
 
                     // For students, check session via API
                     const { user } = await api.checkSession();
                     if (user) {
-                        set({ role: UserRole.STUDENT, user, adminId: null, isLoading: false });
+                        set({ role: UserRole.STUDENT, user, adminId: null, adminRole: null, isLoading: false });
                     } else {
                         // If we had an optimistic user but validation failed, clear it
-                        if (currentRole === UserRole.STUDENT) {
-                            set({ role: UserRole.GUEST, user: null, isLoading: false });
-                        } else {
-                            set({ isLoading: false });
-                        }
+                        set({ role: UserRole.GUEST, user: null, adminId: null, adminRole: null, isLoading: false });
                     }
                 } catch (error) {
                     console.error('Session check failed', error);
-                    // If error (e.g. 401), ensure we are guest
-                    // But only if we weren't an admin (admin will be handled by API interceptor)
-                    if (currentRole !== UserRole.ADMIN) {
-                        set({ role: UserRole.GUEST, user: null, adminId: null, isLoading: false });
-                    } else {
-                        set({ isLoading: false });
-                    }
+                    set({ role: UserRole.GUEST, user: null, adminId: null, isLoading: false });
                 }
             },
         }),
