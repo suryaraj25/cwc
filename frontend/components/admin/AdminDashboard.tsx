@@ -66,10 +66,13 @@ export const AdminDashboard: React.FC = () => {
   >("dashboard");
   const [data, setData] = useState<{
     users: User[];
+    totalUsers: number;
+    currentPage: number;
+    totalPages: number;
     teams: Team[];
     config: VotingConfig;
     teamVotes: Record<string, number>;
-    devices: DeviceRegistry;
+    deviceCount: number;
   } | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
 
@@ -120,11 +123,6 @@ export const AdminDashboard: React.FC = () => {
         usersPageSize,
         debouncedUsersSearch,
       );
-      console.log("Admin data response:", {
-        totalPages: d.totalPages,
-        totalUsers: d.totalUsers,
-        usersCount: d.users?.length,
-      });
       setData(d);
       setUsersTotalPages(d.totalPages || 1);
       // Only sync form if it's the first load (data was null)
@@ -214,8 +212,8 @@ export const AdminDashboard: React.FC = () => {
   // 2. Department Participation Data (Pie Chart)
   const deptStats: Record<string, number> = {};
   data?.users
-    ?.filter((u: { lastVotedAt: any }) => u.lastVotedAt)
-    .forEach((u: { dept: string | number }) => {
+    ?.filter((u: User) => u.lastVotedAt)
+    .forEach((u: User) => {
       const dept = (DEPARTMENT_CODES as any)[u.dept]; // Abbreviate Dept Name
       deptStats[dept] = (deptStats[dept] || 0) + 1;
     });
@@ -226,7 +224,7 @@ export const AdminDashboard: React.FC = () => {
 
   // 3. Activity Timeline (Area Chart - Simulated by grouping hours)
   const timeStats: Record<string, number> = {};
-  data?.users?.forEach((u: { lastVotedAt: string | number | Date }) => {
+  data?.users?.forEach((u: User) => {
     if (u.lastVotedAt) {
       const hour = new Date(u.lastVotedAt).getHours();
       const label = `${hour}:00`;
@@ -314,36 +312,26 @@ export const AdminDashboard: React.FC = () => {
 
     const rows: string[] = [];
 
-    data.users.forEach(
-      (u: {
-        lastVotedAt: string | number | Date;
-        votes: ArrayLike<unknown> | { [s: string]: unknown };
-        name: any;
-        rollNo: any;
-        dept: any;
-        email: any;
-        phone: any;
-      }) => {
-        if (!u.lastVotedAt || Object.keys(u.votes).length === 0) return;
+    data.users.forEach((u: User) => {
+      if (!u.lastVotedAt || Object.keys(u.votes).length === 0) return;
 
-        Object.entries(u.votes).forEach(([teamId, count]) => {
-          const teamName =
-            data.teams.find((t: { id: string }) => t.id === teamId)?.name ||
-            "Unknown Team";
-          const row = [
-            `"${u.name}"`,
-            `"${u.rollNo}"`,
-            `"${u.dept}"`,
-            `"${u.email}"`,
-            `"${u.phone}"`,
-            `"${teamName}"`,
-            count,
-            `"${new Date(u.lastVotedAt!).toLocaleString()}"`,
-          ];
-          rows.push(row.join(","));
-        });
-      },
-    );
+      Object.entries(u.votes).forEach(([teamId, count]) => {
+        const teamName =
+          data.teams.find((t: { id: string }) => t.id === teamId)?.name ||
+          "Unknown Team";
+        const row = [
+          `"${u.name}"`,
+          `"${u.rollNo}"`,
+          `"${u.dept}"`,
+          `"${u.email}"`,
+          `"${u.phone}"`,
+          `"${teamName}"`,
+          count,
+          `"${new Date(u.lastVotedAt!).toLocaleString()}"`,
+        ];
+        rows.push(row.join(","));
+      });
+    });
 
     const csvContent = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -370,9 +358,7 @@ export const AdminDashboard: React.FC = () => {
       (a: number, b: number) => a + b,
       0,
     );
-    const activeVoters = data.users.filter(
-      (u: { lastVotedAt: any }) => u.lastVotedAt,
-    ).length;
+    const activeVoters = data.users.filter((u: User) => u.lastVotedAt).length;
     const leader = chartData.length > 0 ? chartData[0] : null;
 
     const html = `
@@ -489,9 +475,7 @@ export const AdminDashboard: React.FC = () => {
     (a: number, b: number) => a + b,
     0,
   );
-  const activeUsers = data.users.filter(
-    (u: { lastVotedAt: any }) => u.lastVotedAt,
-  ).length;
+  const activeUsers = data.users.filter((u: User) => u.lastVotedAt).length;
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-20">

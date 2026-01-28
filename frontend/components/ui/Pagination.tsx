@@ -20,7 +20,6 @@ export const Pagination: React.FC<PaginationProps> = ({
   pageSizeOptions = [5, 10, 20, 50, 100],
   className = "",
 }) => {
-  console.log("Pagination props:", { currentPage, totalPages, pageSize });
   if (totalPages <= 1 && !onPageSizeChange) return null;
 
   const getPageNumbers = () => {
