@@ -43,6 +43,8 @@ async function adminRoutes(fastify, options) {
         Object.assign(config, request.body);
         await config.save();
 
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
         return config;
     });
 
@@ -54,6 +56,7 @@ async function adminRoutes(fastify, options) {
         if (user) {
             user.boundDeviceId = null;
             await user.save();
+            if (fastify.io) fastify.io.emit('admin:data-update');
             return { success: true };
         }
 

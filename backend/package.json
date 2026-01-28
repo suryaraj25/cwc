@@ -8,13 +8,21 @@
         "dev": "nodemon server.js"
     },
     "dependencies": {
-        "@fastify/cors": "^10.0.0",
-        "@fastify/static": "^9.0.0",
+        "fastify": "^4.29.1",
+        "fastify-socket.io": "^5.1.0",
+        "@fastify/cookie": "^8.3.0",
+        "@fastify/cors": "^8.5.0",
+        "@fastify/jwt": "^7.2.0",
+        "@fastify/rate-limit": "^7.6.0",
+        "@fastify/static": "^6.12.0",
+
         "dotenv": "^16.4.1",
-        "fastify": "^5.0.0",
-        "mongoose": "^8.1.0"
+        "mongoose": "^8.1.0",
+        "ioredis": "^5.9.2",
+        "jsonwebtoken": "^9.0.3"
     },
     "devDependencies": {
         "nodemon": "^3.0.3"
-    }
+    },
+    "license": "MIT"
 }

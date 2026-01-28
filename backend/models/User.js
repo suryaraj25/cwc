@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
     gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
     year: { type: String, required: true },
     passwordHash: { type: String, required: true },
-    boundDeviceId: { type: String, default: null },
+    boundDeviceId: { type: String, default: null }, // Kept for legacy/audit, though logic removed
+    currentSessionToken: { type: String, default: null }, // For Single Session Enforcement
     votes: {
         type: Map,
         of: Number,

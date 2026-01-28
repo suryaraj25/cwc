@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const VoteTransaction = require('../models/VoteTransaction');
 const UserRole = { GUEST: 'GUEST', STUDENT: 'STUDENT', ADMIN: 'ADMIN' }; // Simple enum
 
 async function authRoutes(fastify, options) {
@@ -27,7 +28,8 @@ async function authRoutes(fastify, options) {
 
     // Login
     fastify.post('/login', async (request, reply) => {
-        const { identifier, passwordHash, deviceId } = request.body;
+        const { identifier, passwordHash } = request.body;
+        const crypto = require('crypto');
 
         const user = await User.findOne({
             $or: [{ email: identifier }, { rollNo: identifier }],
@@ -38,23 +40,23 @@ async function authRoutes(fastify, options) {
             return reply.code(401).send({ success: false, message: 'Invalid Credentials.' });
         }
 
-        // Device Binding Logic
-        if (user.boundDeviceId && user.boundDeviceId !== deviceId) {
-            return reply.code(403).send({ success: false, message: 'Security Alert: This account is locked to another device.' });
-        }
+        // Single Session Enforcement Logic
+        const sessionToken = crypto.randomUUID(); // Generate new session ID
+        user.currentSessionToken = sessionToken;
+        await user.save();
 
-        if (!user.boundDeviceId) {
-            // Check if device is taken
-            const deviceUser = await User.findOne({ boundDeviceId: deviceId });
-            if (deviceUser && deviceUser.id !== user.id) {
-                return reply.code(403).send({ success: false, message: 'This device is already bound to another account.' });
-            }
+        // Sign JWT with payload
+        const token = fastify.jwt.sign({ userId: user._id, sessionToken });
 
-            user.boundDeviceId = deviceId;
-            await user.save();
-        }
+        // Set Cookie
+        reply.setCookie('cwc_voting_token', token, {
+            path: '/',
+            httpOnly: true,
+            secure: false, // Set to true if using HTTPS
+            maxAge: 3600 // 1 hour
+        });
 
-        return { success: true, message: 'Login Successful', user };
+        return { success: true, message: 'Login Successful', user }; // Token not returned in body
     });
 
     // Admin Login
@@ -71,19 +73,46 @@ async function authRoutes(fastify, options) {
         return { success: true, message: 'Admin Access Granted', adminId: admin.username };
     });
 
-    // Get Current User (Session equivalent)
-    fastify.get('/me', async (request, reply) => {
-        const { deviceId } = request.query;
-        if (!deviceId) return { user: null };
+    // Get Current User (Protected)
+    fastify.get('/me', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+        // request.authUser is populated by the authenticate decorator
+        const user = request.authUser;
 
-        const user = await User.findOne({ boundDeviceId: deviceId });
-        return { user: user || null };
+        // Calculate Votes Used Today
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const todayTransactions = await VoteTransaction.find({
+            userId: user._id,
+            createdAt: { $gte: startOfDay }
+        });
+
+        const votesUsedToday = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
+
+        return { user, votesUsedToday };
     });
 
     // Get User by ID
     fastify.get('/:id', async (request, reply) => {
         const user = await User.findById(request.params.id);
         return user;
+    });
+    // Logout
+    fastify.post('/logout', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+        // Clear session on server (optional since we rotate token on login, but good practice)
+        const user = request.authUser;
+        user.currentSessionToken = null;
+        await user.save();
+
+        // Clear Cookie
+        reply.clearCookie('cwc_voting_token', { path: '/' });
+
+        return { success: true, message: 'Logout Successful' };
+    });
+
+    // Admin Logout
+    fastify.post('/admin-logout', async (request, reply) => {
+        return { success: true, message: 'Admin Logout Successful' };
     });
 }
 

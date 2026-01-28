@@ -30,3 +30,5 @@ const seedAdmin = async () => {
 };
 
 seedAdmin();
+
+module.exports = { seedAdmin };
