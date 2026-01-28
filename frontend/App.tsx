@@ -18,6 +18,7 @@ import { AiOutlineLogout } from "react-icons/ai";
 
 import { AuthLayout } from "./components/layout/AuthLayout";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { ToastContainer } from "./components/ui/Toast";
 
 const App: React.FC = () => {
   const { checkSession } = useAuthStore();
@@ -28,6 +29,7 @@ const App: React.FC = () => {
 
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<LandingPage />} />
 

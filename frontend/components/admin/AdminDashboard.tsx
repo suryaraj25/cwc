@@ -45,6 +45,8 @@ import {
 import { AdminNavBar } from "./AdminNavBar";
 import { AdminStatsCard } from "./AdminStatsCard";
 import { Pagination } from "../ui/Pagination";
+import { Modal, ModalProps } from "../ui/Modal";
+import { toast } from "../../stores/useToastStore";
 import { useDebounce } from "../../hooks/useDebounce";
 
 // Modern Color Palette for Charts
@@ -115,6 +117,33 @@ export const AdminDashboard: React.FC = () => {
     startTime: string;
     endTime: string;
   }>({ startTime: "", endTime: "" });
+
+  // Modal State
+  const [modalState, setModalState] = useState<ModalProps>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+    onClose: () => {},
+  });
+
+  const showModal = (
+    title: string,
+    message: React.ReactNode,
+    type: ModalProps["type"] = "info",
+    onConfirm?: () => void,
+    options: Partial<ModalProps> = {},
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      ...options,
+      onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+    });
+  };
 
   async function refreshData() {
     try {
@@ -251,16 +280,53 @@ export const AdminDashboard: React.FC = () => {
       // Trying to open
       if (start && end) {
         if (now < start || now > end) {
-          alert(
+          toast.warning(
             "Cannot start voting: Current time is outside the configured Start/End window. Please adjust the times in Settings.",
+            5000,
           );
           return;
         }
       }
     }
 
-    await api.updateConfig({ isVotingOpen: !data.config.isVotingOpen });
-    refreshData();
+    // If we are CLOSING the session, ask for confirmation to avoid accidental stops during live event
+    if (data.config.isVotingOpen) {
+      showModal(
+        "Pause Voting Session?",
+        "Are you sure you want to pause voting? Students will not be able to cast votes until you resume.",
+        "warning",
+        async () => {
+          try {
+            await api.updateConfig({ isVotingOpen: false });
+            toast.info("Voting session paused.");
+            refreshData();
+          } catch (error) {
+            console.error(error);
+            toast.error("Failed to pause session. Check console.");
+          }
+        },
+        { confirmVariant: "destructive", confirmLabel: "Pause Voting" },
+      );
+      return;
+    }
+
+    // If OPENING, ask for confirmation too
+    showModal(
+      "Start Voting Session?",
+      "Are you sure you want to go LIVE? Students will be able to cast votes immediately.",
+      "confirm",
+      async () => {
+        try {
+          await api.updateConfig({ isVotingOpen: true });
+          toast.success("Voting session is LIVE!");
+          refreshData();
+        } catch (error) {
+          console.error(error);
+          toast.error("Failed to start session. Check console.");
+        }
+      },
+      { confirmLabel: "Start Session" },
+    );
   };
 
   const saveConfig = async (e: React.FormEvent) => {
@@ -269,7 +335,7 @@ export const AdminDashboard: React.FC = () => {
       startTime: configForm.startTime || null,
       endTime: configForm.endTime || null,
     });
-    alert("Voting Window Updated Successfully");
+    toast.success("Voting Window Updated Successfully");
     refreshData();
   };
 
@@ -287,9 +353,11 @@ export const AdminDashboard: React.FC = () => {
     if (result.success) {
       setRevokeMessage(`Device unbound for ${user.name}.`);
       setRevokeQuery("");
+      toast.success(`Device unbound for ${user.name}.`);
       refreshData();
     } else {
       setRevokeMessage("Error: User has no bound device.");
+      toast.error("User has no bound device.");
     }
   };
 
@@ -463,11 +531,17 @@ export const AdminDashboard: React.FC = () => {
     setIsAddingTeam(true);
   };
 
-  const handleDeleteTeam = async (id: string) => {
-    if (confirm("Delete this team?")) {
-      await api.deleteTeam(id);
-      refreshData();
-    }
+  const handleDeleteTeam = (id: string) => {
+    showModal(
+      "Delete Team",
+      "Are you sure you want to delete this team? This action cannot be undone.",
+      "confirm",
+      async () => {
+        await api.deleteTeam(id);
+        refreshData();
+      },
+      { confirmVariant: "destructive", confirmLabel: "Delete" },
+    );
   };
 
   // Stats constants
@@ -1401,6 +1475,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      <Modal {...modalState} />
     </div>
   );
 };

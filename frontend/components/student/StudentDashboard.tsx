@@ -9,6 +9,8 @@ import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { LoadingState } from "../ui/LoadingState";
 import { VotingClosedState } from "./VotingClosedState";
 import { TeamVoteCard } from "./TeamVoteCard";
+import { Modal, ModalProps } from "../ui/Modal";
+import { toast } from "../../stores/useToastStore";
 
 interface StudentDashboardProps {}
 
@@ -39,6 +41,33 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
     text: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Modal State
+  const [modalState, setModalState] = useState<ModalProps>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+    onClose: () => {},
+  });
+
+  const showModal = (
+    title: string,
+    message: React.ReactNode,
+    type: ModalProps["type"] = "info",
+    onConfirm?: () => void,
+    options: Partial<ModalProps> = {},
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      message,
+      type,
+      onConfirm,
+      ...options,
+      onClose: () => setModalState((prev) => ({ ...prev, isOpen: false })),
+    });
+  };
 
   // Load data
   useEffect(() => {
@@ -111,48 +140,45 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
     setMessage(null);
   };
 
-  const saveVotes = async () => {
+  const saveVotes = () => {
     if (totalUsed === 0) {
-      setMessage({ type: "error", text: "Please cast at least one vote." });
-      return;
-    }
-    if (
-      !confirm(
-        "Are you sure? Once confirmed, you CANNOT change your votes for today.",
-      )
-    ) {
+      toast.error("Please cast at least one vote.");
       return;
     }
 
-    setSaving(true);
-    try {
-      if (!user) throw new Error("User not found");
-      const result = await api.castVote(user.id, votes);
+    showModal(
+      "Confirm Votes",
+      "Are you sure? Once confirmed, you CANNOT change your votes for today.",
+      "confirm",
+      async () => {
+        setSaving(true);
+        try {
+          if (!user) throw new Error("User not found");
+          const result = await api.castVote(user.id, votes);
 
-      if (result.success) {
-        setVotes({}); // Clear local selection
-        setMessage({ type: "success", text: "Votes submitted successfully!" });
+          if (result.success) {
+            setVotes({}); // Clear local selection
+            toast.success("Votes submitted successfully!");
 
-        // Refresh quota usage
-        const { user: refreshedUser, votesUsedToday } =
-          await api.checkSession();
-        if (refreshedUser) {
-          setUser(refreshedUser);
-          if (votesUsedToday !== undefined) {
-            setServerUsedVotes(votesUsedToday);
+            // Refresh quota usage
+            const { user: refreshedUser, votesUsedToday } =
+              await api.checkSession();
+            if (refreshedUser) {
+              setUser(refreshedUser);
+              if (votesUsedToday !== undefined) {
+                setServerUsedVotes(votesUsedToday);
+              }
+            }
+          } else {
+            toast.error(result.message);
           }
+        } catch (e: any) {
+          toast.error(e.message || "Failed to submit votes");
+        } finally {
+          setSaving(false);
         }
-      } else {
-        setMessage({ type: "error", text: result.message });
-      }
-    } catch (e: any) {
-      setMessage({
-        type: "error",
-        text: e.message || "Failed to submit votes",
-      });
-    } finally {
-      setSaving(false);
-    }
+      },
+    );
   };
 
   if (isLoading) {
@@ -252,6 +278,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
           Confirm & Lock {totalUsed} Votes
         </Button>
       </div>
+      <Modal {...modalState} />
     </div>
   );
 };
