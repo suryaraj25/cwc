@@ -37,7 +37,7 @@ export const api = {
         return res.data;
     },
 
-    adminLogin: async (username: string, password: string): Promise<{ success: boolean; message: string; adminId?: string }> => {
+    adminLogin: async (username: string, password: string): Promise<{ success: boolean; message: string; adminId?: string; admin?: User }> => {
         const res = await apiClient.post(`/auth/admin-login`, { username, password });
         return res.data;
     },
@@ -111,8 +111,8 @@ export const api = {
     },
 
     // Admin
-    getAdminData: async (): Promise<{ users: User[], teams: Team[], config: VotingConfig, teamVotes: Record<string, number>, deviceCount: number }> => {
-        const res = await apiClient.get(`/admin/dashboard`);
+    getAdminData: async (page = 1, limit = 10, search = ''): Promise<{ users: User[], totalUsers: number, currentPage: number, totalPages: number, teams: Team[], config: VotingConfig, teamVotes: Record<string, number>, deviceCount: number }> => {
+        const res = await apiClient.get(`/admin/dashboard?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         return res.data;
     },
 
@@ -126,8 +126,8 @@ export const api = {
         return res.data;
     },
 
-    getTransactions: async (): Promise<any[]> => {
-        const res = await apiClient.get(`/admin/transactions`);
+    getTransactions: async (page = 1, limit = 20, search = ''): Promise<{ transactions: any[], total: number, currentPage: number, totalPages: number }> => {
+        const res = await apiClient.get(`/admin/transactions?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         return res.data;
     }
 };

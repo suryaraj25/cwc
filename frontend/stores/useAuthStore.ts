@@ -46,13 +46,24 @@ export const useAuthStore = create<AuthStore>()(
 
             checkSession: async () => {
                 set({ isLoading: true });
+                const currentRole = get().role;
+                const currentAdminId = get().adminId;
+
                 try {
+                    // If user was an admin, just keep them as admin (since admin uses cookie-based auth)
+                    if (currentRole === UserRole.ADMIN && currentAdminId) {
+                        // Admin session persists via httpOnly cookie, just verify it's still valid
+                        // by keeping the state as-is. The API interceptor will redirect if session expired.
+                        set({ isLoading: false });
+                        return;
+                    }
+
+                    // For students, check session via API
                     const { user } = await api.checkSession();
                     if (user) {
                         set({ role: UserRole.STUDENT, user, adminId: null, isLoading: false });
                     } else {
                         // If we had an optimistic user but validation failed, clear it
-                        const currentRole = get().role;
                         if (currentRole === UserRole.STUDENT) {
                             set({ role: UserRole.GUEST, user: null, isLoading: false });
                         } else {
@@ -62,7 +73,12 @@ export const useAuthStore = create<AuthStore>()(
                 } catch (error) {
                     console.error('Session check failed', error);
                     // If error (e.g. 401), ensure we are guest
-                    set({ role: UserRole.GUEST, user: null, adminId: null, isLoading: false });
+                    // But only if we weren't an admin (admin will be handled by API interceptor)
+                    if (currentRole !== UserRole.ADMIN) {
+                        set({ role: UserRole.GUEST, user: null, adminId: null, isLoading: false });
+                    } else {
+                        set({ isLoading: false });
+                    }
                 }
             },
         }),

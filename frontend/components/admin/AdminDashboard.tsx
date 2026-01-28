@@ -44,6 +44,8 @@ import {
 } from "lucide-react";
 import { AdminNavBar } from "./AdminNavBar";
 import { AdminStatsCard } from "./AdminStatsCard";
+import { Pagination } from "../ui/Pagination";
+import { useDebounce } from "../../hooks/useDebounce";
 
 // Modern Color Palette for Charts
 const COLORS = [
@@ -71,6 +73,25 @@ export const AdminDashboard: React.FC = () => {
   } | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
 
+  // Pagination States
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsPageSize, setTransactionsPageSize] = useState(20);
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
+
+  // Search States
+  const [usersSearchInput, setUsersSearchInput] = useState("");
+  const [transactionsSearchInput, setTransactionsSearchInput] = useState("");
+
+  // Debounced search values (3 seconds)
+  const debouncedUsersSearch = useDebounce(usersSearchInput, 3000);
+  const debouncedTransactionsSearch = useDebounce(
+    transactionsSearchInput,
+    3000,
+  );
+
   // UI States
   const [revokeQuery, setRevokeQuery] = useState("");
   const [revokeMessage, setRevokeMessage] = useState("");
@@ -94,8 +115,18 @@ export const AdminDashboard: React.FC = () => {
 
   async function refreshData() {
     try {
-      const d = await api.getAdminData();
+      const d = await api.getAdminData(
+        usersPage,
+        usersPageSize,
+        debouncedUsersSearch,
+      );
+      console.log("Admin data response:", {
+        totalPages: d.totalPages,
+        totalUsers: d.totalUsers,
+        usersCount: d.users?.length,
+      });
       setData(d);
+      setUsersTotalPages(d.totalPages || 1);
       // Only sync form if it's the first load (data was null)
       if (d && d.config && !data) {
         setConfigForm({
@@ -139,9 +170,29 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === "transactions") {
-      api.getTransactions().then(setTransactions).catch(console.error);
+      api
+        .getTransactions(
+          transactionsPage,
+          transactionsPageSize,
+          debouncedTransactionsSearch,
+        )
+        .then((response) => {
+          setTransactions(response.transactions);
+          setTransactionsTotalPages(response.totalPages || 1);
+        })
+        .catch(console.error);
     }
-  }, [activeTab]);
+  }, [
+    activeTab,
+    transactionsPage,
+    transactionsPageSize,
+    debouncedTransactionsSearch,
+  ]);
+
+  // Refetch users when page, page size, or search changes
+  useEffect(() => {
+    refreshData();
+  }, [usersPage, usersPageSize, debouncedUsersSearch]);
 
   if (!data)
     return (
@@ -154,18 +205,18 @@ export const AdminDashboard: React.FC = () => {
 
   // 1. Leaderboard Data
   const chartData = data?.teams
-    ?.map((t) => ({
+    ?.map((t: { name: any; id: string | number }) => ({
       name: t.name,
       votes: data.teamVotes[t.id] || 0,
     }))
-    .sort((a, b) => b.votes - a.votes);
+    .sort((a: { votes: number }, b: { votes: number }) => b.votes - a.votes);
 
   // 2. Department Participation Data (Pie Chart)
   const deptStats: Record<string, number> = {};
   data?.users
-    ?.filter((u) => u.lastVotedAt)
-    .forEach((u) => {
-      const dept = (DEPARTMENT_CODES as any)[u.dept] // Abbreviate Dept Name
+    ?.filter((u: { lastVotedAt: any }) => u.lastVotedAt)
+    .forEach((u: { dept: string | number }) => {
+      const dept = (DEPARTMENT_CODES as any)[u.dept]; // Abbreviate Dept Name
       deptStats[dept] = (deptStats[dept] || 0) + 1;
     });
   const pieData = Object.entries(deptStats)
@@ -175,7 +226,7 @@ export const AdminDashboard: React.FC = () => {
 
   // 3. Activity Timeline (Area Chart - Simulated by grouping hours)
   const timeStats: Record<string, number> = {};
-  data?.users?.forEach((u) => {
+  data?.users?.forEach((u: { lastVotedAt: string | number | Date }) => {
     if (u.lastVotedAt) {
       const hour = new Date(u.lastVotedAt).getHours();
       const label = `${hour}:00`;
@@ -227,7 +278,8 @@ export const AdminDashboard: React.FC = () => {
   const handleRevoke = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = data.users.find(
-      (u) => u.email === revokeQuery || u.rollNo === revokeQuery,
+      (u: { email: any; rollNo: any }) =>
+        u.email === revokeQuery || u.rollNo === revokeQuery,
     );
     if (!user) {
       setRevokeMessage("User not found.");
@@ -262,25 +314,36 @@ export const AdminDashboard: React.FC = () => {
 
     const rows: string[] = [];
 
-    data.users.forEach((u) => {
-      if (!u.lastVotedAt || Object.keys(u.votes).length === 0) return;
+    data.users.forEach(
+      (u: {
+        lastVotedAt: string | number | Date;
+        votes: ArrayLike<unknown> | { [s: string]: unknown };
+        name: any;
+        rollNo: any;
+        dept: any;
+        email: any;
+        phone: any;
+      }) => {
+        if (!u.lastVotedAt || Object.keys(u.votes).length === 0) return;
 
-      Object.entries(u.votes).forEach(([teamId, count]) => {
-        const teamName =
-          data.teams.find((t) => t.id === teamId)?.name || "Unknown Team";
-        const row = [
-          `"${u.name}"`,
-          `"${u.rollNo}"`,
-          `"${u.dept}"`,
-          `"${u.email}"`,
-          `"${u.phone}"`,
-          `"${teamName}"`,
-          count,
-          `"${new Date(u.lastVotedAt!).toLocaleString()}"`,
-        ];
-        rows.push(row.join(","));
-      });
-    });
+        Object.entries(u.votes).forEach(([teamId, count]) => {
+          const teamName =
+            data.teams.find((t: { id: string }) => t.id === teamId)?.name ||
+            "Unknown Team";
+          const row = [
+            `"${u.name}"`,
+            `"${u.rollNo}"`,
+            `"${u.dept}"`,
+            `"${u.email}"`,
+            `"${u.phone}"`,
+            `"${teamName}"`,
+            count,
+            `"${new Date(u.lastVotedAt!).toLocaleString()}"`,
+          ];
+          rows.push(row.join(","));
+        });
+      },
+    );
 
     const csvContent = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -307,7 +370,9 @@ export const AdminDashboard: React.FC = () => {
       (a: number, b: number) => a + b,
       0,
     );
-    const activeVoters = data.users.filter((u) => u.lastVotedAt).length;
+    const activeVoters = data.users.filter(
+      (u: { lastVotedAt: any }) => u.lastVotedAt,
+    ).length;
     const leader = chartData.length > 0 ? chartData[0] : null;
 
     const html = `
@@ -364,7 +429,7 @@ export const AdminDashboard: React.FC = () => {
                 <tbody>
                     ${chartData
                       .map(
-                        (t, i) => `
+                        (t: { name: any; votes: number }, i: number) => `
                         <tr>
                             <td>${i + 1}</td>
                             <td>${t.name} ${i === 0 ? '<span class="leader-badge">LEADER</span>' : ""}</td>
@@ -424,7 +489,9 @@ export const AdminDashboard: React.FC = () => {
     (a: number, b: number) => a + b,
     0,
   );
-  const activeUsers = data.users.filter((u) => u.lastVotedAt).length;
+  const activeUsers = data.users.filter(
+    (u: { lastVotedAt: any }) => u.lastVotedAt,
+  ).length;
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-20">
@@ -537,7 +604,7 @@ export const AdminDashboard: React.FC = () => {
                       itemStyle={{ color: "#fff" }}
                     />
                     <Bar dataKey="votes" radius={[0, 4, 4, 0]} barSize={32}>
-                      {chartData.map((entry, index) => (
+                      {chartData.map((entry: any, index: number) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
@@ -677,13 +744,24 @@ export const AdminDashboard: React.FC = () => {
                     ["Date,User,RollNo,Department,Team,Votes"].join(",") +
                     "\n" +
                     transactions
-                      .map((t) => {
-                        const deptCode = t.userId?.dept
-                          ? (DEPARTMENT_CODES as any)[t.userId.dept] ||
-                            t.userId.dept
-                          : "N/A";
-                        return `${new Date(t.createdAt).toISOString()},${t.userId?.name},${t.userId?.rollNo},${deptCode},${t.teamId?.name},${t.votes}`;
-                      })
+                      .map(
+                        (t: {
+                          userId: {
+                            dept: string | number;
+                            name: any;
+                            rollNo: any;
+                          };
+                          createdAt: string | number | Date;
+                          teamId: { name: any };
+                          votes: any;
+                        }) => {
+                          const deptCode = t.userId?.dept
+                            ? (DEPARTMENT_CODES as any)[t.userId.dept] ||
+                              t.userId.dept
+                            : "N/A";
+                          return `${new Date(t.createdAt).toISOString()},${t.userId?.name},${t.userId?.rollNo},${deptCode},${t.teamId?.name},${t.votes}`;
+                        },
+                      )
                       .join("\n");
                   const encoded = encodeURI(csvContent);
                   const link = document.createElement("a");
@@ -695,6 +773,22 @@ export const AdminDashboard: React.FC = () => {
               >
                 <Download className="w-4 h-4 mr-2" /> Export CSV
               </Button>
+            </div>
+          </div>
+
+          {/* Search Input */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by student name, roll number, or team name..."
+                value={transactionsSearchInput}
+                onChange={(e: { target: { value: any } }) =>
+                  setTransactionsSearchInput(e.target.value)
+                }
+                className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl  pl-12 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+              />
             </div>
           </div>
 
@@ -721,43 +815,51 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {transactions.map((tx) => {
-                    const deptCode = tx.userId?.dept
-                      ? (DEPARTMENT_CODES as any)[tx.userId.dept] ||
-                        tx.userId.dept
-                      : "N/A";
-                    return (
-                      <tr
-                        key={tx._id}
-                        className="hover:bg-slate-700/30 transition-colors"
-                      >
-                        <td className="px-6 py-4 text-sm text-slate-300">
-                          {new Date(tx.createdAt).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-white">
-                              {tx.userId?.name || "Unknown"}
+                  {transactions.map(
+                    (tx: {
+                      userId: { dept: string | number; name: any; rollNo: any };
+                      _id: any;
+                      createdAt: string | number | Date;
+                      teamId: { name: any };
+                      votes: any;
+                    }) => {
+                      const deptCode = tx.userId?.dept
+                        ? (DEPARTMENT_CODES as any)[tx.userId.dept] ||
+                          tx.userId.dept
+                        : "N/A";
+                      return (
+                        <tr
+                          key={tx._id}
+                          className="hover:bg-slate-700/30 transition-colors"
+                        >
+                          <td className="px-6 py-4 text-sm text-slate-300">
+                            {new Date(tx.createdAt).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-white">
+                                {tx.userId?.name || "Unknown"}
+                              </span>
+                              <span className="text-xs text-slate-500 font-mono">
+                                {tx.userId?.rollNo}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-mono text-indigo-300">
+                            {deptCode}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-indigo-400">
+                            {tx.teamId?.name || "Unknown Team"}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-700 text-white font-bold text-xs ring-1 ring-slate-600">
+                              {tx.votes}
                             </span>
-                            <span className="text-xs text-slate-500 font-mono">
-                              {tx.userId?.rollNo}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm font-mono text-indigo-300">
-                          {deptCode}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-indigo-400">
-                          {tx.teamId?.name || "Unknown Team"}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-700 text-white font-bold text-xs ring-1 ring-slate-600">
-                            {tx.votes}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )}
                   {transactions.length === 0 && (
                     <tr>
                       <td
@@ -770,6 +872,18 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </tbody>
               </table>
+              {/* Pagination */}
+              <Pagination
+                currentPage={transactionsPage}
+                totalPages={transactionsTotalPages}
+                onPageChange={(page: number) => setTransactionsPage(page)}
+                pageSize={transactionsPageSize}
+                onPageSizeChange={(size) => {
+                  setTransactionsPageSize(size);
+                  setTransactionsPage(1); // Reset to first page when changing page size
+                }}
+                className="mt-6"
+              />
             </div>
           </div>
         </div>
@@ -820,7 +934,7 @@ export const AdminDashboard: React.FC = () => {
                   <input
                     className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                     value={teamForm.name}
-                    onChange={(e) =>
+                    onChange={(e: { target: { value: any } }) =>
                       setTeamForm({ ...teamForm, name: e.target.value })
                     }
                     required
@@ -834,7 +948,7 @@ export const AdminDashboard: React.FC = () => {
                   <input
                     className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                     value={teamForm.description}
-                    onChange={(e) =>
+                    onChange={(e: { target: { value: any } }) =>
                       setTeamForm({ ...teamForm, description: e.target.value })
                     }
                     required
@@ -848,7 +962,7 @@ export const AdminDashboard: React.FC = () => {
                   <input
                     className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
                     value={teamForm.imageUrl}
-                    onChange={(e) =>
+                    onChange={(e: { target: { value: any } }) =>
                       setTeamForm({ ...teamForm, imageUrl: e.target.value })
                     }
                     required
@@ -885,7 +999,7 @@ export const AdminDashboard: React.FC = () => {
                 </p>
               </div>
             )}
-            {data.teams.map((team) => (
+            {data.teams.map((team: Team) => (
               <div
                 key={team.id}
                 className="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 shadow-lg group relative hover:border-indigo-500/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
@@ -963,10 +1077,12 @@ export const AdminDashboard: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search..."
-                  className="w-full md:w-64 bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search by name, roll number, email, or department..."
+                  className="w-full md:w-80 bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={usersSearchInput}
+                  onChange={(e: { target: { value: any } }) =>
+                    setUsersSearchInput(e.target.value)
+                  }
                 />
               </div>
             </div>
@@ -986,158 +1102,161 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {data.users
-                    .filter(
-                      (u) =>
-                        u.name
-                          .toLowerCase()
-                          .includes(userSearch.toLowerCase()) ||
-                        u.rollNo
-                          .toLowerCase()
-                          .includes(userSearch.toLowerCase()),
-                    )
-                    .map((user) => (
-                      <React.Fragment key={user.id}>
-                        <tr
-                          className={`group hover:bg-slate-700/30 transition-colors cursor-pointer ${expandedUser === user.id ? "bg-slate-700/30" : ""}`}
-                          onClick={() =>
-                            setExpandedUser(
-                              expandedUser === user.id ? null : user.id,
-                            )
-                          }
-                        >
-                          <td className="p-5 text-slate-600 group-hover:text-indigo-400 transition-colors no-print">
-                            {expandedUser === user.id ? (
-                              <ChevronDown size={16} />
-                            ) : (
-                              <ChevronRight size={16} />
+                  {data.users.map((user: User) => (
+                    <React.Fragment key={user.id}>
+                      <tr
+                        className={`group hover:bg-slate-700/30 transition-colors cursor-pointer ${expandedUser === user.id ? "bg-slate-700/30" : ""}`}
+                        onClick={() =>
+                          setExpandedUser(
+                            expandedUser === user.id ? null : user.id,
+                          )
+                        }
+                      >
+                        <td className="p-5 text-slate-600 group-hover:text-indigo-400 transition-colors no-print">
+                          {expandedUser === user.id ? (
+                            <ChevronDown size={16} />
+                          ) : (
+                            <ChevronRight size={16} />
+                          )}
+                        </td>
+                        <td className="p-5">
+                          <div className="font-bold text-white text-base">
+                            {user.name}
+                          </div>
+                          <div className="text-xs font-mono text-indigo-400 mt-0.5">
+                            {user.rollNo}
+                          </div>
+                        </td>
+                        <td className="p-5 text-slate-400 font-medium max-w-[200px] truncate">
+                          {user.dept}
+                        </td>
+                        <td className="p-5 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center min-w-[32px] h-8 rounded-lg text-xs font-bold ${Object.keys(user.votes).length > 0 ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-700 text-slate-500"}`}
+                          >
+                            {Object.values(user.votes).reduce(
+                              (a: number, b: number) => a + b,
+                              0,
                             )}
-                          </td>
-                          <td className="p-5">
-                            <div className="font-bold text-white text-base">
-                              {user.name}
-                            </div>
-                            <div className="text-xs font-mono text-indigo-400 mt-0.5">
-                              {user.rollNo}
-                            </div>
-                          </td>
-                          <td className="p-5 text-slate-400 font-medium max-w-[200px] truncate">
-                            {user.dept}
-                          </td>
-                          <td className="p-5 text-center">
-                            <span
-                              className={`inline-flex items-center justify-center min-w-[32px] h-8 rounded-lg text-xs font-bold ${Object.keys(user.votes).length > 0 ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-700 text-slate-500"}`}
-                            >
-                              {Object.values(user.votes).reduce(
-                                (a: number, b: number) => a + b,
-                                0,
-                              )}
-                            </span>
-                          </td>
-                          <td className="p-5 text-right text-slate-500 text-xs font-mono">
-                            {user.lastVotedAt
-                              ? new Date(user.lastVotedAt).toLocaleString()
-                              : "---"}
-                          </td>
-                        </tr>
-                        {expandedUser === user.id && (
-                          <tr className="bg-slate-900/40">
-                            <td colSpan={5} className="p-6">
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                {/* Vote History */}
-                                <div>
-                                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                                    Vote Breakdown
-                                  </h4>
-                                  <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-2">
-                                    {Object.keys(user.votes).length > 0 ? (
-                                      Object.entries(user.votes).map(
-                                        ([tid, count]) => {
-                                          const team = data.teams.find(
-                                            (t) => t.id === tid,
-                                          );
-                                          return (
-                                            <div
-                                              key={tid}
-                                              className="flex justify-between items-center p-2 rounded-lg bg-slate-700/30"
-                                            >
-                                              <div className="flex items-center gap-3">
-                                                {team?.imageUrl && (
-                                                  <img
-                                                    src={team.imageUrl}
-                                                    className="w-8 h-8 rounded-md object-cover"
-                                                    alt=""
-                                                  />
-                                                )}
-                                                <span className="text-slate-200 text-sm font-medium">
-                                                  {team?.name || "Unknown Team"}
-                                                </span>
-                                              </div>
-                                              <span className="font-bold text-white bg-slate-900 px-3 py-1 rounded-md text-xs">
-                                                {count} Votes
+                          </span>
+                        </td>
+                        <td className="p-5 text-right text-slate-500 text-xs font-mono">
+                          {user.lastVotedAt
+                            ? new Date(user.lastVotedAt).toLocaleString()
+                            : "---"}
+                        </td>
+                      </tr>
+                      {expandedUser === user.id && (
+                        <tr className="bg-slate-900/40">
+                          <td colSpan={5} className="p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                              {/* Vote History */}
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                  Vote Breakdown
+                                </h4>
+                                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-2">
+                                  {Object.keys(user.votes).length > 0 ? (
+                                    Object.entries(user.votes).map(
+                                      ([tid, count]) => {
+                                        const team = data.teams.find(
+                                          (t: { id: string }) => t.id === tid,
+                                        );
+                                        return (
+                                          <div
+                                            key={tid}
+                                            className="flex justify-between items-center p-2 rounded-lg bg-slate-700/30"
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              {team?.imageUrl && (
+                                                <img
+                                                  src={team.imageUrl}
+                                                  className="w-8 h-8 rounded-md object-cover"
+                                                  alt=""
+                                                />
+                                              )}
+                                              <span className="text-slate-200 text-sm font-medium">
+                                                {team?.name || "Unknown Team"}
                                               </span>
                                             </div>
-                                          );
-                                        },
-                                      )
-                                    ) : (
-                                      <p className="text-slate-500 text-sm italic">
-                                        No votes cast yet.
-                                      </p>
-                                    )}
-                                  </div>
+                                            <span className="font-bold text-white bg-slate-900 px-3 py-1 rounded-md text-xs">
+                                              {count} Votes
+                                            </span>
+                                          </div>
+                                        );
+                                      },
+                                    )
+                                  ) : (
+                                    <p className="text-slate-500 text-sm italic">
+                                      No votes cast yet.
+                                    </p>
+                                  )}
                                 </div>
+                              </div>
 
-                                {/* User Details */}
-                                <div>
-                                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                                    Contact Profile
-                                  </h4>
-                                  <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 text-sm space-y-3">
-                                    <div className="flex justify-between border-b border-slate-700 pb-2">
-                                      <span className="text-slate-500">
-                                        Email Address
-                                      </span>
-                                      <span className="text-slate-200 font-medium">
-                                        {user.email}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between border-b border-slate-700 pb-2">
-                                      <span className="text-slate-500">
-                                        Phone Number
-                                      </span>
-                                      <span className="text-slate-200 font-medium">
-                                        {user.phone}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between border-b border-slate-700 pb-2">
-                                      <span className="text-slate-500">
-                                        Year / Gender
-                                      </span>
-                                      <span className="text-slate-200 font-medium">
-                                        {user.year} / {user.gender}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between pt-1">
-                                      <span className="text-slate-500">
-                                        Device ID Hash
-                                      </span>
-                                      <span className="text-indigo-400 font-mono text-xs">
-                                        {user.boundDeviceId || "Unbound"}
-                                      </span>
-                                    </div>
+                              {/* User Details */}
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                  Contact Profile
+                                </h4>
+                                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 text-sm space-y-3">
+                                  <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-500">
+                                      Email Address
+                                    </span>
+                                    <span className="text-slate-200 font-medium">
+                                      {user.email}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-500">
+                                      Phone Number
+                                    </span>
+                                    <span className="text-slate-200 font-medium">
+                                      {user.phone}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-500">
+                                      Year / Gender
+                                    </span>
+                                    <span className="text-slate-200 font-medium">
+                                      {user.year} / {user.gender}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between pt-1">
+                                    <span className="text-slate-500">
+                                      Device ID Hash
+                                    </span>
+                                    <span className="text-indigo-400 font-mono text-xs">
+                                      {user.boundDeviceId || "Unbound"}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={usersPage}
+            totalPages={usersTotalPages}
+            onPageChange={(page: number) => setUsersPage(page)}
+            pageSize={usersPageSize}
+            onPageSizeChange={(size) => {
+              setUsersPageSize(size);
+              setUsersPage(1); // Reset to first page when changing page size
+            }}
+            className="mt-6"
+          />
         </div>
       )}
 
@@ -1247,7 +1366,7 @@ export const AdminDashboard: React.FC = () => {
                       type="datetime-local"
                       className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none [color-scheme:dark]"
                       value={configForm.startTime}
-                      onChange={(e) =>
+                      onChange={(e: { target: { value: any } }) =>
                         setConfigForm({
                           ...configForm,
                           startTime: e.target.value,
@@ -1267,7 +1386,7 @@ export const AdminDashboard: React.FC = () => {
                       type="datetime-local"
                       className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none [color-scheme:dark]"
                       value={configForm.endTime}
-                      onChange={(e) =>
+                      onChange={(e: { target: { value: any } }) =>
                         setConfigForm({
                           ...configForm,
                           endTime: e.target.value,
