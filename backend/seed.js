@@ -27,6 +27,22 @@ const seedAdmin = async () => {
             console.log('Password:', adminPassword, '(hashed in DB)');
         }
 
+        // Check for Super Admin
+        const superAdminExists = await Admin.findOne({ username: 'BITSUPERADMIN' });
+        if (superAdminExists) {
+            console.log('Super Admin already exists');
+        } else {
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            await Admin.create({
+                username: 'BITSUPERADMIN',
+                passwordHash: hashedPassword,
+                role: 'SUPER_ADMIN'
+            });
+            console.log('Super Admin created successfully');
+            console.log('Username: BITSUPERADMIN');
+            console.log('Password:', adminPassword, '(hashed in DB)');
+        }
+
         mongoose.connection.close();
     } catch (error) {
         console.error('Seeding failed:', error);

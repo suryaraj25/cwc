@@ -45,56 +45,8 @@ fastify.register(require('@fastify/jwt'), {
     }
 });
 
-// Auth Decorator
-fastify.decorate("authenticate", async function (request, reply) {
-    try {
-        const token = request.cookies.cwc_voting_token;
-        if (!token) {
-            return reply.code(401).send({ success: false, message: 'Unauthorized: No Token' });
-        }
-
-        const decoded = fastify.jwt.verify(token);
-        const { userId, sessionToken } = decoded;
-
-        // DB Lookup (No Redis)
-        const User = require('./routes/auth').User || require('./models/User'); // Load User model
-        const user = await User.findById(userId);
-
-        // If user not found OR session token doesn't match current DB token
-        if (!user || user.currentSessionToken !== sessionToken) {
-            return reply.code(401).send({ success: false, message: 'Session Expired: Logged in on another device.' });
-        }
-
-        // Attach user to request for convenience
-        request.authUser = user;
-    } catch (err) {
-        reply.code(401).send({ success: false, message: 'Unauthorized: Invalid Token' });
-    }
-});
-
-// Admin Auth Decorator
-fastify.decorate("authenticateAdmin", async function (request, reply) {
-    try {
-        const token = request.cookies.cwc_admin_token;
-        if (!token) {
-            return reply.code(401).send({ success: false, message: 'Unauthorized: No Admin Token' });
-        }
-
-        const decoded = fastify.jwt.verify(token);
-        const { adminId, sessionToken } = decoded;
-
-        const Admin = require('./models/Admin');
-        const admin = await Admin.findOne({ username: adminId });
-
-        if (!admin || admin.currentSessionToken !== sessionToken) {
-            return reply.code(401).send({ success: false, message: 'Session Expired: Logged in on another device.' });
-        }
-
-        request.authAdmin = admin;
-    } catch (err) {
-        reply.code(401).send({ success: false, message: 'Unauthorized: Invalid Admin Token' });
-    }
-});
+// Register Auth Middleware
+fastify.register(require('./middleware/authMiddleware'));
 
 // Database Connection
 const connectDB = async () => {

@@ -57,7 +57,7 @@ async function authRoutes(fastify, options) {
             path: '/',
             httpOnly: true,
             secure: false, // Set to true if using HTTPS
-            maxAge: 3600 // 1 hour
+            maxAge: 7200 // 2 hours
         });
 
         return { success: true, message: 'Login Successful', user }; // Token not returned in body
@@ -89,10 +89,10 @@ async function authRoutes(fastify, options) {
             path: '/',
             httpOnly: true,
             secure: false, // Set to true if using HTTPS
-            maxAge: 3600 // 1 hour
+            maxAge: 7200 // 2 hours
         });
 
-        return { success: true, message: 'Admin Access Granted', adminId: admin.username };
+        return { success: true, message: 'Admin Access Granted', adminId: admin.username, role: admin.role };
     });
 
     // Get Current User (Protected)
@@ -112,6 +112,11 @@ async function authRoutes(fastify, options) {
         const votesUsedToday = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
 
         return { user, votesUsedToday };
+    });
+
+    // Get Current Admin (Protected)
+    fastify.get('/admin-me', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        return { success: true, adminId: request.authAdmin.username, role: request.authAdmin.role };
     });
 
     // Get User by ID

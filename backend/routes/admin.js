@@ -87,6 +87,11 @@ async function adminRoutes(fastify, options) {
 
     // Get Transactions with Pagination and Search
     fastify.get('/transactions', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can see transactions
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
         const page = parseInt(request.query.page) || 1;
         const limit = parseInt(request.query.limit) || 20;
         const search = request.query.search || '';
