@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { io } from "socket.io-client";
 import { User, Team, VotingConfig } from "../../types";
 import { api } from "../../services/api";
 import { Card } from "../ui/Card";
@@ -31,6 +32,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   // Local state for CURRENT session votes (always start at 0)
   const [votes, setVotes] = useState<Record<string, number>>({});
+  console.log("votes", votes);
 
   // Track votes already used on server
   const [serverUsedVotes, setServerUsedVotes] = useState(0);
@@ -71,23 +73,25 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
     fetchData();
 
-    // Poll for status updates
-    const interval = setInterval(async () => {
-      const data = await api.getAdminData();
-      if (data.config) {
-        setConfig((prev) => {
-          if (
-            prev.isVotingOpen !== data.config.isVotingOpen ||
-            prev.dailyQuota !== data.config.dailyQuota
-          ) {
-            return data.config;
-          }
-          return prev;
-        });
-      }
-    }, 2000);
+    // Socket Connection for Real-time Updates
+    // NOTE: In production, use env variable for URL
+    const socket = io("http://localhost:5000", {
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+    });
 
-    return () => clearInterval(interval);
+    socket.on("connect", () => {
+      console.log("Connected to WebSocket");
+    });
+
+    socket.on("admin:data-update", () => {
+      console.log("Received Real-time Update");
+      fetchData(); // Reload config
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [user.id]);
 
   const totalCurrentSession = (Object.values(votes) as number[]).reduce(
@@ -256,7 +260,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               key={team.id}
               className="group relative bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 hover:border-indigo-500 transition-all shadow-xl"
             >
-              <div className="aspect-video w-full overflow-hidden">
+              <div className="aspect-video w-full overflow-hidden relative">
                 <img
                   src={team.imageUrl}
                   alt={team.name}
@@ -307,7 +311,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         <Button
           onClick={saveVotes}
           isLoading={saving}
-          disabled={totalUsed === 0 && Object.keys(votes).length === 0}
+          disabled={totalCurrentSession === 0}
           className="w-full max-w-md shadow-2xl py-4 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
         >
           Confirm & Lock {totalUsed} Votes
