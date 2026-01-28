@@ -113,12 +113,18 @@ fastify.register(require('./routes/teams'), { prefix: '/api/teams' });
 fastify.register(require('./routes/voting'), { prefix: '/api/voting' });
 fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
 
-fastify.get('*', (request, reply) => {
-    if (request.raw.url?.startsWith('/api')) {
-        return reply.callNotFound(); // This triggers 404 properly for unknown API routes
+fastify.setNotFoundHandler((request, reply) => {
+    if (request.raw.url.startsWith('/api')) {
+        return reply.code(404).send({
+            success: false,
+            message: 'API route not found'
+        });
     }
+
+    // SPA fallback
     return reply.sendFile('index.html');
 });
+
 
 // Start Server
 const start = async () => {
