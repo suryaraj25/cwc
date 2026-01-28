@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
 import { User, Team, VotingConfig, DeviceRegistry } from "../../types";
 import { api } from "../../services/api";
+import { DEPARTMENT_CODES } from "../../constants";
 import { Button } from "../ui/Button";
 import {
   BarChart,
@@ -59,7 +60,7 @@ const COLORS = [
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "teams" | "users" | "settings"
+    "dashboard" | "teams" | "users" | "settings" | "transactions"
   >("dashboard");
   const [data, setData] = useState<{
     users: User[];
@@ -68,6 +69,7 @@ export const AdminDashboard: React.FC = () => {
     teamVotes: Record<string, number>;
     devices: DeviceRegistry;
   } | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // UI States
   const [revokeQuery, setRevokeQuery] = useState("");
@@ -134,6 +136,12 @@ export const AdminDashboard: React.FC = () => {
       socket.disconnect();
     };
   }, []); // Run once on mount
+
+  useEffect(() => {
+    if (activeTab === "transactions") {
+      api.getTransactions().then(setTransactions).catch(console.error);
+    }
+  }, [activeTab]);
 
   if (!data)
     return (
@@ -434,6 +442,11 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1 scrollbar-hide">
           {[
             { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
+            {
+              id: "transactions",
+              icon: FileSpreadsheet,
+              label: "Transactions",
+            },
             { id: "teams", icon: Trophy, label: "Teams" },
             { id: "users", icon: Users, label: "Students" },
             { id: "settings", icon: Clock, label: "Schedule" },
@@ -698,7 +711,122 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* --- TEAMS TAB --- */}
+      {/* --- TRANSACTIONS TAB --- */}
+      {activeTab === "transactions" && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+            <div>
+              <h3 className="text-2xl font-bold text-white">Voting Log</h3>
+              <p className="text-sm text-slate-400">
+                Real-time audit trail of all votes cast.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const csvContent =
+                    "data:text/csv;charset=utf-8," +
+                    ["Date,User,RollNo,Department,Team,Votes"].join(",") +
+                    "\n" +
+                    transactions
+                      .map((t) => {
+                        const deptCode = t.userId?.dept
+                          ? (DEPARTMENT_CODES as any)[t.userId.dept] ||
+                            t.userId.dept
+                          : "N/A";
+                        return `${new Date(t.createdAt).toISOString()},${t.userId?.name},${t.userId?.rollNo},${deptCode},${t.teamId?.name},${t.votes}`;
+                      })
+                      .join("\n");
+                  const encoded = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encoded);
+                  link.setAttribute("download", "transactions.csv");
+                  document.body.appendChild(link);
+                  link.click();
+                }}
+              >
+                <Download className="w-4 h-4 mr-2" /> Export CSV
+              </Button>
+            </div>
+          </div>
+
+          <div className="admin-glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-900/50 border-b border-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Date & Time
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Student
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Team Voted
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Votes
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {transactions.map((tx) => {
+                    const deptCode = tx.userId?.dept
+                      ? (DEPARTMENT_CODES as any)[tx.userId.dept] ||
+                        tx.userId.dept
+                      : "N/A";
+                    return (
+                      <tr
+                        key={tx._id}
+                        className="hover:bg-slate-700/30 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-slate-300">
+                          {new Date(tx.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white">
+                              {tx.userId?.name || "Unknown"}
+                            </span>
+                            <span className="text-xs text-slate-500 font-mono">
+                              {tx.userId?.rollNo}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-mono text-indigo-300">
+                          {deptCode}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-indigo-400">
+                          {tx.teamId?.name || "Unknown Team"}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-700 text-white font-bold text-xs ring-1 ring-slate-600">
+                            {tx.votes}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {transactions.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-slate-500"
+                      >
+                        No transactions found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {activeTab === "teams" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">

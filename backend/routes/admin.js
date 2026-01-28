@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Team = require('../models/Team');
 const Config = require('../models/Config');
+const VoteTransaction = require('../models/VoteTransaction');
 
 async function adminRoutes(fastify, options) {
 
@@ -61,6 +62,15 @@ async function adminRoutes(fastify, options) {
         }
 
         return reply.code(404).send({ success: false, message: 'User not found' });
+    });
+
+    // Get Transactions
+    fastify.get('/transactions', async (request, reply) => {
+        const transactions = await VoteTransaction.find()
+            .populate('userId', 'name rollNo dept')
+            .populate('teamId', 'name')
+            .sort({ createdAt: -1 });
+        return transactions;
     });
 }
 

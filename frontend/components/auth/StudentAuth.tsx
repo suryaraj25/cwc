@@ -12,10 +12,15 @@ interface StudentAuthProps {
   onLoginSuccess: (user: User) => void;
 }
 
+const BITS_EMAIL_REGEX =
+  /^[a-z]+(\.[a-z]{2,5}[0-9]{2})@bitsathy\.ac\.in$/;
+
+
 export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
 
   // Form State
   const [formData, setFormData] = useState({
@@ -49,7 +54,11 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
           throw new Error("Passwords do not match");
         if (!formData.rollNo || !formData.email || !formData.name)
           throw new Error("All fields are required");
-
+        if (!BITS_EMAIL_REGEX.test(formData.email)) {
+          throw new Error(
+            "Invalid email format. Use format like name.dept-year@bitsathy.ac.in",
+          );
+        }
         const result = await api.register({
           name: formData.name,
           rollNo: formData.rollNo,
@@ -78,6 +87,11 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
         }
       } else {
         // Login
+        if (!BITS_EMAIL_REGEX.test(formData.email)) {
+          throw new Error(
+            "Invalid email format. Use format like name.dept-year@bitsathy.ac.in",
+          );
+        }
         const result = await api.login(
           formData.rollNo || formData.email,
           formData.password,
@@ -213,11 +227,11 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({ onLoginSuccess }) => {
           ) : (
             <>
               <Input
-                label="Roll No or Email"
-                name="rollNo"
-                value={formData.rollNo}
+                label="Email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter Roll No or Email"
+                placeholder="Enter Email"
                 required
               />
               <Input
