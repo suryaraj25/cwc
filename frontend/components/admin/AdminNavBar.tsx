@@ -70,7 +70,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             }`}
           />
           <span
-            className={`text-xs font-bold uppercase tracking-wider ${
+            className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
               config.isVotingOpen ? "text-green-400" : "text-red-400"
             }`}
           >
@@ -83,7 +83,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             config.isVotingOpen
               ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
               : "bg-green-600 text-white hover:bg-green-500"
-          } border-0 px-6 py-2 rounded-xl transition-all font-bold`}
+          } border-0 px-6 py-2 rounded-xl transition-all font-bold whitespace-nowrap`}
         >
           {config.isVotingOpen ? (
             <>

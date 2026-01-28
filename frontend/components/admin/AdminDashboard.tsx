@@ -165,10 +165,7 @@ export const AdminDashboard: React.FC = () => {
   data?.users
     ?.filter((u) => u.lastVotedAt)
     .forEach((u) => {
-      const dept = u.dept
-        .split(" ")
-        .map((w) => w[0])
-        .join(""); // Abbreviate Dept Name
+      const dept = (DEPARTMENT_CODES as any)[u.dept] // Abbreviate Dept Name
       deptStats[dept] = (deptStats[dept] || 0) + 1;
     });
   const pieData = Object.entries(deptStats)
@@ -536,6 +533,8 @@ export const AdminDashboard: React.FC = () => {
                         borderRadius: "8px",
                         color: "#fff",
                       }}
+                      labelStyle={{ color: "#fff" }}
+                      itemStyle={{ color: "#fff" }}
                     />
                     <Bar dataKey="votes" radius={[0, 4, 4, 0]} barSize={32}>
                       {chartData.map((entry, index) => (
@@ -557,15 +556,15 @@ export const AdminDashboard: React.FC = () => {
                 <h3 className="text-sm font-bold text-slate-300 uppercase mb-4">
                   Department Activity
                 </h3>
-                <div className="flex-1 relative">
+                <div className="flex-1 relative min-h-[180px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
+                        innerRadius={35}
+                        outerRadius={60}
                         paddingAngle={5}
                         dataKey="value"
                       >
@@ -585,6 +584,8 @@ export const AdminDashboard: React.FC = () => {
                           color: "#fff",
                           fontSize: "10px",
                         }}
+                        labelStyle={{ color: "#fff" }}
+                        itemStyle={{ color: "#fff" }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -637,6 +638,8 @@ export const AdminDashboard: React.FC = () => {
                           color: "#fff",
                           fontSize: "10px",
                         }}
+                        labelStyle={{ color: "#fff" }}
+                        itemStyle={{ color: "#fff" }}
                       />
                       <Area
                         type="monotone"
