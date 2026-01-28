@@ -141,5 +141,10 @@ export const api = {
     getTransactions: async (page = 1, limit = 20, search = ''): Promise<{ transactions: any[], total: number, currentPage: number, totalPages: number }> => {
         const res = await apiClient.get(`/admin/transactions?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         return res.data;
+    },
+
+    getAuditLogs: async (page = 1, limit = 20, search = ''): Promise<{ logs: any[], total: number, currentPage: number, totalPages: number }> => {
+        const res = await apiClient.get(`/admin/audit-logs?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        return res.data;
     }
 };

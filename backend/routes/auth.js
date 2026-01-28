@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Admin = require('../models/Admin');
 const VoteTransaction = require('../models/VoteTransaction');
+const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcrypt');
 const UserRole = { GUEST: 'GUEST', STUDENT: 'STUDENT', ADMIN: 'ADMIN' }; // Simple enum
 
@@ -60,6 +61,15 @@ async function authRoutes(fastify, options) {
             maxAge: 7200 // 2 hours
         });
 
+        // 6. Audit Log
+        await AuditLog.create({
+            userId: user._id,
+            userType: 'USER',
+            action: 'LOGIN',
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
+
         return { success: true, message: 'Login Successful', user }; // Token not returned in body
     });
 
@@ -90,6 +100,15 @@ async function authRoutes(fastify, options) {
             httpOnly: true,
             secure: false, // Set to true if using HTTPS
             maxAge: 7200 // 2 hours
+        });
+
+        // 6. Audit Log
+        await AuditLog.create({
+            adminId: admin.username,
+            userType: 'ADMIN',
+            action: 'LOGIN',
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
         });
 
         return { success: true, message: 'Admin Access Granted', adminId: admin.username, role: admin.role };
@@ -134,11 +153,30 @@ async function authRoutes(fastify, options) {
         // Clear Cookie
         reply.clearCookie('cwc_voting_token', { path: '/' });
 
+        // Audit Log
+        await AuditLog.create({
+            userId: user._id,
+            userType: 'USER',
+            action: 'LOGOUT',
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
+
         return { success: true, message: 'Logout Successful' };
     });
 
     // Admin Logout
-    fastify.post('/admin-logout', async (request, reply) => {
+    fastify.post('/admin-logout', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const admin = request.authAdmin;
+
+        // Audit Log
+        await AuditLog.create({
+            adminId: admin.username,
+            userType: 'ADMIN',
+            action: 'LOGOUT',
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
         // Clear Cookie
         reply.clearCookie('cwc_admin_token', { path: '/' });
 

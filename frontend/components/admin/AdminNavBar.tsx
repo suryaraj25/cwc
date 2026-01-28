@@ -7,14 +7,27 @@ import {
   Clock,
   Play,
   Pause,
+  Shield,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { VotingConfig } from "../../types";
 
 interface AdminNavBarProps {
-  activeTab: "dashboard" | "teams" | "users" | "settings" | "transactions";
+  activeTab:
+    | "dashboard"
+    | "teams"
+    | "users"
+    | "settings"
+    | "transactions"
+    | "audit_logs";
   setActiveTab: (
-    tab: "dashboard" | "teams" | "users" | "settings" | "transactions",
+    tab:
+      | "dashboard"
+      | "teams"
+      | "users"
+      | "settings"
+      | "transactions"
+      | "audit_logs",
   ) => void;
   config: VotingConfig;
   toggleVoting: () => void;
@@ -37,6 +50,11 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             icon: FileSpreadsheet,
             label: "Transactions",
           },
+          {
+            id: "audit_logs",
+            icon: Shield,
+            label: "Audit Logs",
+          },
         ]
       : []),
     { id: "teams", icon: Trophy, label: "Teams" },
@@ -51,7 +69,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-105"
                 : "text-slate-400 hover:text-white hover:bg-slate-700/50"

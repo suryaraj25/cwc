@@ -45,6 +45,7 @@ import {
 import { AdminNavBar } from "./AdminNavBar";
 import { AdminStatsCard } from "./AdminStatsCard";
 import { Pagination } from "../ui/Pagination";
+import { AuditLogsTable } from "./AuditLogsTable";
 import { Modal, ModalProps } from "../ui/Modal";
 import { toast } from "../../stores/useToastStore";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -66,7 +67,7 @@ const COLORS = [
 export const AdminDashboard: React.FC = () => {
   const { adminRole } = useAuthStore();
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "teams" | "users" | "settings" | "transactions"
+    "dashboard" | "teams" | "users" | "settings" | "transactions" | "audit_logs"
   >("dashboard");
   const [data, setData] = useState<{
     users: User[];
@@ -1396,7 +1397,12 @@ export const AdminDashboard: React.FC = () => {
                 </div>
             )} */}
 
-      {/* --- SETTINGS TAB --- */}
+      {activeTab === "audit_logs" && (
+        <div className="max-w-7xl mx-auto">
+          <AuditLogsTable />
+        </div>
+      )}
+
       {activeTab === "settings" && (
         <div className="max-w-3xl mx-auto">
           <div className="admin-glass rounded-2xl p-8">
