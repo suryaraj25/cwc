@@ -113,7 +113,7 @@ fastify.register(require('./routes/teams'), { prefix: '/api/teams' });
 fastify.register(require('./routes/voting'), { prefix: '/api/voting' });
 fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
 
-fastify.get("/", async (req, reply) => {
+fastify.get("*", async (req, reply) => {
     return reply.sendFile("index.html");
 });
 
