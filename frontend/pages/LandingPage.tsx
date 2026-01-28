@@ -1,8 +1,16 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Fingerprint, MonitorSmartphone } from "lucide-react";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { adminId } = useAuthStore();
+  console.log(adminId)
+  useEffect(()=>{
+    if(adminId) navigate('/admin')
+  },[adminId])
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background Ambience */}
