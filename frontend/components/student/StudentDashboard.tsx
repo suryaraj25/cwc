@@ -101,7 +101,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
 
     // Socket Connection for Real-time Updates
     // NOTE: In production, use env variable for URL
-    const socket = io("http://localhost:5000", {
+    const socket = io("https://cwc-b4ir.onrender.com", {
       withCredentials: true,
       transports: ["websocket", "polling"],
     });
