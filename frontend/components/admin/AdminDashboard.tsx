@@ -148,6 +148,19 @@ export const AdminDashboard: React.FC = () => {
     });
   };
 
+  const toISTString = (dateString: string | number | Date) => {
+    const date = new Date(dateString);
+    const istDate = new Date(
+      date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    );
+    const year = istDate.getFullYear();
+    const month = String(istDate.getMonth() + 1).padStart(2, "0");
+    const day = String(istDate.getDate()).padStart(2, "0");
+    const hours = String(istDate.getHours()).padStart(2, "0");
+    const minutes = String(istDate.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   async function refreshData() {
     try {
       const d = await api.getAdminData(
@@ -160,12 +173,8 @@ export const AdminDashboard: React.FC = () => {
       // Only sync form if it's the first load (data was null)
       if (d && d.config && !data) {
         setConfigForm({
-          startTime: d.config.startTime
-            ? new Date(d.config.startTime).toISOString().slice(0, 16)
-            : "",
-          endTime: d.config.endTime
-            ? new Date(d.config.endTime).toISOString().slice(0, 16)
-            : "",
+          startTime: d.config.startTime ? toISTString(d.config.startTime) : "",
+          endTime: d.config.endTime ? toISTString(d.config.endTime) : "",
         });
       }
     } catch (e) {
@@ -273,11 +282,23 @@ export const AdminDashboard: React.FC = () => {
 
   const toggleVoting = async () => {
     // Check if within time window
-    const now = new Date();
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    );
     const start = data.config.startTime
-      ? new Date(data.config.startTime)
+      ? new Date(
+          new Date(data.config.startTime).toLocaleString("en-US", {
+            timeZone: "Asia/Kolkata",
+          }),
+        )
       : null;
-    const end = data.config.endTime ? new Date(data.config.endTime) : null;
+    const end = data.config.endTime
+      ? new Date(
+          new Date(data.config.endTime).toLocaleString("en-US", {
+            timeZone: "Asia/Kolkata",
+          }),
+        )
+      : null;
 
     if (!data.config.isVotingOpen) {
       // Trying to open
@@ -335,8 +356,12 @@ export const AdminDashboard: React.FC = () => {
   const saveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.updateConfig({
-      startTime: configForm.startTime || null,
-      endTime: configForm.endTime || null,
+      startTime: configForm.startTime
+        ? new Date(`${configForm.startTime}+05:30`).toISOString()
+        : null,
+      endTime: configForm.endTime
+        ? new Date(`${configForm.endTime}+05:30`).toISOString()
+        : null,
     });
     toast.success("Voting Window Updated Successfully");
     refreshData();
@@ -1425,7 +1450,7 @@ export const AdminDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    Session Start Time
+                    Session Start Time (IST)
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
@@ -1445,7 +1470,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    Session End Time
+                    Session End Time (IST)
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />

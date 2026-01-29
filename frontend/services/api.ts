@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
