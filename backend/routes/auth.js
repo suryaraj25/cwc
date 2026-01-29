@@ -168,6 +168,7 @@ async function authRoutes(fastify, options) {
     // Admin Logout
     fastify.post('/admin-logout', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const admin = request.authAdmin;
+        console.log("request",request)
 
         // Audit Log
         await AuditLog.create({

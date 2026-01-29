@@ -138,6 +138,47 @@ export const api = {
         return res.data;
     },
 
+    resetPassword: async (userId: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.post(`/admin/reset-password`, { userId, newPassword });
+        return res.data;
+    },
+
+    deleteUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.delete(`/admin/users/${userId}`);
+        return res.data;
+    },
+
+    forceLogoutUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.post(`/admin/logout-user`, { userId });
+        return res.data;
+    },
+
+    // Admin Management
+    getAdmins: async (): Promise<{ success: boolean; admins: any[] }> => {
+        const res = await apiClient.get('/admin/admins');
+        return res.data;
+    },
+
+    createAdmin: async (data: any): Promise<{ success: boolean; message: string; admin: any }> => {
+        const res = await apiClient.post('/admin/admins', data);
+        return res.data;
+    },
+
+    deleteAdmin: async (adminId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.delete(`/admin/admins/${adminId}`);
+        return res.data;
+    },
+
+    resetAdminPassword: async (adminId: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.post('/admin/admins/reset-password', { adminId, newPassword });
+        return res.data;
+    },
+
+    forceLogoutAdmin: async (adminId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.post('/admin/admins/logout', { adminId });
+        return res.data;
+    },
+
     getTransactions: async (page = 1, limit = 20, search = ''): Promise<{ transactions: any[], total: number, currentPage: number, totalPages: number }> => {
         const res = await apiClient.get(`/admin/transactions?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         return res.data;

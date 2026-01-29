@@ -3,6 +3,7 @@ const Team = require('../models/Team');
 const Config = require('../models/Config');
 const VoteTransaction = require('../models/VoteTransaction');
 const AuditLog = require('../models/AuditLog');
+const Admin = require('../models/Admin');
 
 async function adminRoutes(fastify, options) {
 
@@ -25,7 +26,7 @@ async function adminRoutes(fastify, options) {
 
         // Get paginated users with search
         const [users, totalUsers] = await Promise.all([
-            User.find(searchQuery).skip(skip).limit(limit),
+            User.find(searchQuery).skip(skip).limit(limit).select('-hashedPassword'),
             User.countDocuments(searchQuery)
         ]);
 
@@ -203,6 +204,269 @@ async function adminRoutes(fastify, options) {
             currentPage: page,
             totalPages: Math.ceil(total / limit)
         };
+    });
+
+    // Reset User Password (Super Admin Only)
+    fastify.post('/reset-password', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can reset passwords
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
+        const { userId, newPassword } = request.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return reply.code(400).send({ success: false, message: 'Password must be at least 6 characters long' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return reply.code(404).send({ success: false, message: 'User not found' });
+        }
+
+        const bcrypt = require('bcrypt');
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        user.passwordHash = hashedPassword;
+        // Invalidate current sessions if any
+        user.currentSessionToken = null;
+
+        await user.save();
+
+        // Audit Log
+        if (request.ip) { // Check if we have request context for logging
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'PASSWORD_RESET',
+                details: `Reset password for user ${user.email} (${user.rollNo})`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Password reset successfully' };
+    });
+
+    // Delete User (Super Admin Only)
+    fastify.delete('/users/:id', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can delete users
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
+        const userId = request.params.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return reply.code(404).send({ success: false, message: 'User not found' });
+        }
+
+        // Cascade Delete
+        await Promise.all([
+            VoteTransaction.deleteMany({ userId: userId }),
+            AuditLog.deleteMany({ userId: userId }),
+            User.findByIdAndDelete(userId)
+        ]);
+
+        // Audit Log for the Admin
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'DELETE_USER',
+                details: `Deleted user ${user.email} (${user.rollNo}) and associated data`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
+        return { success: true, message: 'User deleted successfully' };
+    });
+
+    // Force Logout User (Super Admin Only)
+    fastify.post('/logout-user', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can force logout
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
+        const { userId } = request.body;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return reply.code(404).send({ success: false, message: 'User not found' });
+        }
+
+        // Invalidate session
+        user.currentSessionToken = null;
+        await user.save();
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'FORCE_LOGOUT',
+                details: `Forced logout for user ${user.email} (${user.rollNo})`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        // Optional: Emit socket event to notify client to disconnect immediately
+        if (fastify.io) {
+            fastify.io.emit('force-logout', { userId: user._id });
+        }
+
+        return { success: true, message: 'User logged out successfully' };
+    });
+
+    // --- ADMIN MANAGEMENT ROUTES ---
+
+    // Get All Admins (Super Admin Only)
+    fastify.get('/admins', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden' });
+        }
+        const admins = await Admin.find({}, '-passwordHash').sort({ createdAt: -1 });
+        return { success: true, admins };
+    });
+
+    // Create New Admin (Super Admin Only)
+    fastify.post('/admins', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden' });
+        }
+        const { username, password, role } = request.body;
+
+        if (!username || !password) {
+            return reply.code(400).send({ success: false, message: 'Username and password are required' });
+        }
+
+        const existing = await Admin.findOne({ username });
+        if (existing) {
+            return reply.code(400).send({ success: false, message: 'Username already exists' });
+        }
+
+        const bcrypt = require('bcrypt');
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const newAdmin = await Admin.create({
+            username,
+            passwordHash,
+            role: role || 'ADMIN'
+        });
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'CREATE_ADMIN',
+                details: `Created admin ${username} with role ${role || 'ADMIN'}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Admin created successfully', admin: { username: newAdmin.username, role: newAdmin.role, id: newAdmin._id } };
+    });
+
+    // Delete Admin (Super Admin Only)
+    fastify.delete('/admins/:id', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden' });
+        }
+
+        const adminId = request.params.id;
+
+        // Prevent self-deletion
+        // Note: authAdmin has username, findById uses _id. Need to check properly.
+        const targetAdmin = await Admin.findById(adminId);
+        if (!targetAdmin) return reply.code(404).send({ success: false, message: 'Admin not found' });
+
+        if (targetAdmin.username === request.authAdmin.username) {
+            return reply.code(400).send({ success: false, message: 'Cannot delete yourself' });
+        }
+
+        await Admin.findByIdAndDelete(adminId);
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'DELETE_ADMIN',
+                details: `Deleted admin ${targetAdmin.username}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Admin deleted successfully' };
+    });
+
+    // Reset Admin Password (Super Admin Only)
+    fastify.post('/admins/reset-password', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden' });
+        }
+        const { adminId, newPassword } = request.body;
+
+        const targetAdmin = await Admin.findById(adminId);
+        if (!targetAdmin) return reply.code(404).send({ success: false, message: 'Admin not found' });
+
+        const bcrypt = require('bcrypt');
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        targetAdmin.passwordHash = hashedPassword;
+        targetAdmin.currentSessionToken = null; // Logout
+        await targetAdmin.save();
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'RESET_ADMIN_PASSWORD',
+                details: `Reset password for admin ${targetAdmin.username}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Password reset successfully' };
+    });
+
+    // Force Logout Admin (Super Admin Only)
+    fastify.post('/admins/logout', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden' });
+        }
+        const { adminId } = request.body;
+
+        const targetAdmin = await Admin.findById(adminId);
+        if (!targetAdmin) return reply.code(404).send({ success: false, message: 'Admin not found' });
+
+        targetAdmin.currentSessionToken = null;
+        await targetAdmin.save();
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'FORCE_LOGOUT_ADMIN',
+                details: `Forced logout for admin ${targetAdmin.username}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Admin logged out successfully' };
     });
 }
 

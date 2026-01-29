@@ -41,6 +41,10 @@ import {
   Calendar,
   FileText,
   Loader,
+  Lock,
+  LogOut,
+  UserCog,
+  ShieldAlert,
 } from "lucide-react";
 import { AdminNavBar } from "./AdminNavBar";
 import { AdminStatsCard } from "./AdminStatsCard";
@@ -67,7 +71,13 @@ const COLORS = [
 export const AdminDashboard: React.FC = () => {
   const { adminRole } = useAuthStore();
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "teams" | "users" | "settings" | "transactions" | "audit_logs"
+    | "dashboard"
+    | "teams"
+    | "users"
+    | "settings"
+    | "transactions"
+    | "audit_logs"
+    | "admins"
   >("dashboard");
   const [data, setData] = useState<{
     users: User[];
@@ -80,6 +90,7 @@ export const AdminDashboard: React.FC = () => {
     deviceCount: number;
   } | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]); // Admins List State
 
   // Pagination States
   const [usersPage, setUsersPage] = useState(1);
@@ -115,11 +126,108 @@ export const AdminDashboard: React.FC = () => {
     imageUrl: "",
   });
 
+  // Password Reset State
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+
   // Config State
   const [configForm, setConfigForm] = useState<{
     startTime: string;
     endTime: string;
   }>({ startTime: "", endTime: "" });
+
+  // Admin Management State
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [resetAdminPasswordOpen, setResetAdminPasswordOpen] = useState(false);
+  const [targetAdminId, setTargetAdminId] = useState<string | null>(null);
+  const [adminForm, setAdminForm] = useState({
+    username: "",
+    password: "",
+    role: "ADMIN",
+  });
+  const [adminNewPassword, setAdminNewPassword] = useState("");
+
+  const fetchAdmins = async () => {
+    try {
+      const res = await api.getAdmins();
+      if (res.success) setAdmins(res.admins);
+    } catch (error) {
+      console.error("Failed to fetch admins", error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "admins") {
+      fetchAdmins();
+    }
+  }, [activeTab]);
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createAdmin(adminForm);
+      toast.success("Admin created successfully");
+      setCreateAdminOpen(false);
+      setAdminForm({ username: "", password: "", role: "ADMIN" });
+      fetchAdmins();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to create admin");
+    }
+  };
+
+  const handleDeleteAdmin = (adminId: string) => {
+    showModal(
+      "Delete Administrator",
+      "Are you sure you want to delete this administrator?",
+      "confirm",
+      async () => {
+        try {
+          await api.deleteAdmin(adminId);
+          toast.success("Admin deleted successfully");
+          fetchAdmins();
+        } catch (error: any) {
+          toast.error(
+            error.response?.data?.message || "Failed to delete admin",
+          );
+        }
+      },
+      { confirmVariant: "destructive", confirmLabel: "Delete Admin" },
+    );
+  };
+
+  const handleResetAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetAdminId || !adminNewPassword) return;
+    try {
+      await api.resetAdminPassword(targetAdminId, adminNewPassword);
+      toast.success("Admin password reset successfully");
+      setResetAdminPasswordOpen(false);
+      setAdminNewPassword("");
+      setTargetAdminId(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+    }
+  };
+
+  const handleForceLogoutAdmin = (adminId: string) => {
+    showModal(
+      "Force Logout Admin",
+      "Are you sure you want to logout this admin?",
+      "confirm",
+      async () => {
+        try {
+          await api.forceLogoutAdmin(adminId);
+          toast.success("Admin logged out successfully");
+        } catch (error: any) {
+          toast.error(
+            error.response?.data?.message || "Failed to logout admin",
+          );
+        }
+      },
+      { confirmVariant: "destructive", confirmLabel: "Force Logout" },
+    );
+  };
 
   // Modal State
   const [modalState, setModalState] = useState<ModalProps>({
@@ -387,6 +495,63 @@ export const AdminDashboard: React.FC = () => {
       setRevokeMessage("Error: User has no bound device.");
       toast.error("User has no bound device.");
     }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetUserId || !newPassword) return;
+
+    try {
+      await api.resetPassword(resetUserId, newPassword);
+      toast.success("Password reset successfully");
+      setResetPasswordOpen(false);
+      setNewPassword("");
+      setResetUserId(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+    }
+  };
+
+  const openResetPasswordModal = (userId: string) => {
+    setResetUserId(userId);
+    setNewPassword("");
+    setResetPasswordOpen(true);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    showModal(
+      "Delete User",
+      "Are you sure you want to permanently delete this user? All their votes and logs will be wiped. This action cannot be undone.",
+      "confirm", // Fixed type from string literal abuse if possible, otherwise 'confirm' or similar based on ModalProps
+      async () => {
+        try {
+          await api.deleteUser(userId);
+          toast.success("User deleted successfully");
+          refreshData();
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || "Failed to delete user");
+        }
+      },
+      { confirmVariant: "destructive", confirmLabel: "Delete User" },
+    );
+  };
+
+  const handleForceLogout = (userId: string) => {
+    showModal(
+      "Force Logout",
+      "Are you sure you want to force logout this user? They will be disconnected immediately.",
+      "confirm",
+      async () => {
+        try {
+          await api.forceLogoutUser(userId);
+          toast.success("User logged out successfully");
+          refreshData();
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || "Failed to logout user");
+        }
+      },
+      { confirmVariant: "destructive", confirmLabel: "Force Logout" },
+    );
   };
 
   // --- REPORT GENERATION ---
@@ -1319,6 +1484,38 @@ export const AdminDashboard: React.FC = () => {
                                       {user.boundDeviceId || "Unbound"}
                                     </span>
                                   </div>
+
+                                  {adminRole === "SUPER_ADMIN" && (
+                                    <div className="pt-4 mt-4 border-t border-slate-700 flex gap-3">
+                                      <Button
+                                        variant="secondary"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200"
+                                        onClick={() =>
+                                          openResetPasswordModal(user.id)
+                                        }
+                                      >
+                                        <Lock size={16} /> Reset Password
+                                      </Button>
+                                      <Button
+                                        variant="danger"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-white border border-red-500/20"
+                                        onClick={() =>
+                                          handleDeleteUser(user.id)
+                                        }
+                                      >
+                                        <Trash2 size={16} /> Delete User
+                                      </Button>
+                                      <Button
+                                        variant="secondary"
+                                        className="flex-1 flex items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20"
+                                        onClick={() =>
+                                          handleForceLogout(user.id)
+                                        }
+                                      >
+                                        <LogOut size={16} /> Force Logout
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1422,6 +1619,126 @@ export const AdminDashboard: React.FC = () => {
                 </div>
             )} */}
 
+      {activeTab === "admins" && (
+        <div className="max-w-7xl mx-auto">
+          <div className="admin-glass rounded-2xl p-8 mb-6 border-l-4 border-l-indigo-500">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white">
+                  Administrator Management
+                </h3>
+                <p className="text-sm text-slate-400">
+                  Manage admin access and security.
+                </p>
+              </div>
+              <Button
+                onClick={() => setCreateAdminOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2"
+              >
+                <Plus size={18} /> Create New Admin
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-700 bg-slate-900/50 text-xs uppercase tracking-wider text-slate-400">
+                    <th className="p-5 font-bold">Username</th>
+                    <th className="p-5 font-bold">Role</th>
+                    <th className="p-5 font-bold">Status</th>
+                    <th className="p-5 font-bold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {admins.map((admin) => (
+                    <tr
+                      key={admin._id}
+                      className="hover:bg-slate-700/30 transition-colors"
+                    >
+                      <td className="p-5">
+                        <div className="font-bold text-white">
+                          {admin.username}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          ID: {admin._id}
+                        </div>
+                      </td>
+                      <td className="p-5">
+                        <span
+                          className={`px-2 py-1 rounded-md text-xs font-bold ${admin.role === "SUPER_ADMIN" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-blue-500/10 text-blue-400 border border-blue-500/20"}`}
+                        >
+                          {admin.role}
+                        </span>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${admin.currentSessionToken ? "bg-green-500 animate-pulse" : "bg-slate-500"}`}
+                          ></div>
+                          <span className="text-slate-300 text-sm">
+                            {admin.currentSessionToken ? "Online" : "Offline"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {adminRole === "SUPER_ADMIN" &&
+                            admin.username !== "superadmin" && ( // Prevent editing main superadmin if needed, or just self check in backend
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  title="Reset Password"
+                                  className="bg-slate-700 hover:bg-slate-600 text-slate-200 p-2 h-auto"
+                                  onClick={() => {
+                                    setTargetAdminId(admin._id);
+                                    setResetAdminPasswordOpen(true);
+                                  }}
+                                >
+                                  <Lock size={16} />
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  title="Force Logout"
+                                  className="bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 p-2 h-auto"
+                                  onClick={() =>
+                                    handleForceLogoutAdmin(admin._id)
+                                  }
+                                >
+                                  <LogOut size={16} />
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  title="Delete Admin"
+                                  className="bg-red-500/10 hover:bg-red-500/20 text-white border border-red-500/20 p-2 h-auto"
+                                  onClick={() => handleDeleteAdmin(admin._id)}
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </>
+                            )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {admins.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="p-8 text-center text-slate-500"
+                      >
+                        No administrators found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "audit_logs" && (
         <div className="max-w-7xl mx-auto">
           <AuditLogsTable />
@@ -1510,6 +1827,166 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
       <Modal {...modalState} />
+      {/* Reset Password Modal */}
+      {resetPasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">
+              Reset Password
+            </h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Enter a new permanent password for this user. They will be logged
+              out of all active sessions.
+            </p>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  New Password
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="Min 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setResetPasswordOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Reset Password
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Create Admin Modal */}
+      {createAdminOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Create New Administrator
+            </h3>
+            <form onSubmit={handleCreateAdmin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={adminForm.username}
+                  onChange={(e) =>
+                    setAdminForm({ ...adminForm, username: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={adminForm.password}
+                  onChange={(e) =>
+                    setAdminForm({ ...adminForm, password: e.target.value })
+                  }
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Role
+                </label>
+                <select
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={adminForm.role}
+                  onChange={(e) =>
+                    setAdminForm({ ...adminForm, role: e.target.value })
+                  }
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setCreateAdminOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Create Admin
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Admin Password Modal */}
+      {resetAdminPasswordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">
+              Reset Admin Password
+            </h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Enter a new password for this administrator.
+            </p>
+            <form onSubmit={handleResetAdminPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  New Password
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={adminNewPassword}
+                  onChange={(e) => setAdminNewPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setResetAdminPasswordOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Reset Password
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

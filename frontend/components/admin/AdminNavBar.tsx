@@ -8,6 +8,7 @@ import {
   Play,
   Pause,
   Shield,
+  UserCog,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { VotingConfig } from "../../types";
@@ -19,7 +20,8 @@ interface AdminNavBarProps {
     | "users"
     | "settings"
     | "transactions"
-    | "audit_logs";
+    | "audit_logs"
+    | "admins";
   setActiveTab: (
     tab:
       | "dashboard"
@@ -27,7 +29,8 @@ interface AdminNavBarProps {
       | "users"
       | "settings"
       | "transactions"
-      | "audit_logs",
+      | "audit_logs"
+      | "admins",
   ) => void;
   config: VotingConfig;
   toggleVoting: () => void;
@@ -45,6 +48,11 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
     { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
     ...(userRole === "SUPER_ADMIN"
       ? [
+          {
+            id: "admins",
+            icon: UserCog,
+            label: "Admins",
+          },
           {
             id: "transactions",
             icon: FileSpreadsheet,
