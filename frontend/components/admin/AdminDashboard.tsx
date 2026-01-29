@@ -90,7 +90,9 @@ export const AdminDashboard: React.FC = () => {
   } | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]); // Admins List State
-
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set()); // Socket-based online users
+  const [onlineAdmins, setOnlineAdmins] = useState<Set<string>>(new Set()); // Socket-based online admins
+  console.log("online user: ", onlineUsers);
   // Pagination States (Transactions only now)
   // Users pagination removed
   const [transactionsPage, setTransactionsPage] = useState(1);
@@ -298,9 +300,18 @@ export const AdminDashboard: React.FC = () => {
       console.log("Connected to WebSocket");
     });
 
+    socket.on("admin:online-users", (userIds: string[]) => {
+      setOnlineUsers(new Set(userIds));
+    });
+
+    socket.on("admin:online-admins", (adminIds: string[]) => {
+      setOnlineAdmins(new Set(adminIds));
+    });
+
     socket.on("admin:data-update", () => {
       console.log("Received Real-time Update");
       refreshData();
+      if (activeTab === "admins") fetchAdmins();
     });
 
     return () => {
@@ -1365,8 +1376,11 @@ export const AdminDashboard: React.FC = () => {
                           )}
                         </td>
                         <td className="p-5">
-                          <div className="font-bold text-white text-base">
-                            {user.name}
+                          <div className="font-bold text-white text-base flex items-center gap-2">
+                            {user.name}{" "}
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${onlineUsers.has(user.id) ? "bg-green-500 animate-pulse" : "bg-slate-500"}`}
+                            ></span>
                           </div>
                           <div className="text-xs font-mono text-indigo-400 mt-0.5">
                             {user.rollNo}
@@ -1657,10 +1671,12 @@ export const AdminDashboard: React.FC = () => {
                       <td className="p-5">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${admin.currentSessionToken ? "bg-green-500 animate-pulse" : "bg-slate-500"}`}
+                            className={`w-2 h-2 rounded-full ${onlineAdmins.has(admin.username) ? "bg-green-500 animate-pulse" : "bg-slate-500"}`}
                           ></div>
                           <span className="text-slate-300 text-sm">
-                            {admin.currentSessionToken ? "Online" : "Offline"}
+                            {onlineAdmins.has(admin.username)
+                              ? "Online"
+                              : "Offline"}
                           </span>
                         </div>
                       </td>

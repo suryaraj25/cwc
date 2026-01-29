@@ -11,6 +11,7 @@ export interface User {
   boundDeviceId: string | null;
   votes: Record<string, number>; // teamId -> count
   lastVotedAt?: string;
+  currentSessionToken?: string;
 }
 
 export interface Team {

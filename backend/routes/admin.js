@@ -23,7 +23,7 @@ async function adminRoutes(fastify, options) {
 
         // Get all users with search
         const [users, totalUsers] = await Promise.all([
-            User.find(searchQuery).select('-hashedPassword'),
+            User.find(searchQuery).select('-passwordHash'),
             User.countDocuments(searchQuery)
         ]);
 

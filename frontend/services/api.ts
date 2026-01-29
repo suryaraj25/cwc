@@ -10,19 +10,8 @@ const apiClient = axios.create({
 });
 
 // Add response interceptor to handle unauthorized errors globally
-apiClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            // User is unauthorized - redirect to home
-            // Only redirect if not already on auth pages
-            if (!window.location.pathname.includes('/auth') && window.location.pathname !== '/') {
-                window.location.href = '/';
-            }
-        }
-        return Promise.reject(error);
-    }
-);
+// Interceptor removed to prevent auto-redirects on 401 (e.g. during checkSession)
+// apiClient.interceptors.response.use...
 
 export const api = {
     // Auth

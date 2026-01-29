@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from "./stores/useAuthStore";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { LandingPage } from "./pages/LandingPage";
+import { NotFound } from "./pages/NotFound";
 import { StudentAuth } from "./components/auth/StudentAuth";
 import { AdminLogin } from "./components/auth/AdminLogin";
 import { StudentDashboard } from "./components/student/StudentDashboard";
@@ -22,6 +23,7 @@ import { ToastContainer } from "./components/ui/Toast";
 
 const App: React.FC = () => {
   const { checkSession } = useAuthStore();
+  console.log("App Component Rendered");
 
   useEffect(() => {
     checkSession();
@@ -73,7 +75,7 @@ const App: React.FC = () => {
           />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

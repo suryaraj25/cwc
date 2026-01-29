@@ -70,6 +70,10 @@ async function authRoutes(fastify, options) {
             userAgent: request.headers['user-agent']
         });
 
+        // 7. Emit Real-time Update
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
+
         return { success: true, message: 'Login Successful', user }; // Token not returned in body
     });
 
@@ -110,6 +114,10 @@ async function authRoutes(fastify, options) {
             ipAddress: request.ip,
             userAgent: request.headers['user-agent']
         });
+
+        // 7. Emit Real-time Update
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
 
         return { success: true, message: 'Admin Access Granted', adminId: admin.username, role: admin.role };
     });
@@ -162,13 +170,16 @@ async function authRoutes(fastify, options) {
             userAgent: request.headers['user-agent']
         });
 
+        // Emit Real-time Update
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
+
         return { success: true, message: 'Logout Successful' };
     });
 
     // Admin Logout
     fastify.post('/admin-logout', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const admin = request.authAdmin;
-        console.log("request", request)
 
         // Audit Log
         await AuditLog.create({
@@ -178,6 +189,10 @@ async function authRoutes(fastify, options) {
             ipAddress: request.ip,
             userAgent: request.headers['user-agent']
         });
+
+        // Emit Real-time Update
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
         // Clear Cookie
         reply.clearCookie('cwc_admin_token', { path: '/' });
 
