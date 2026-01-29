@@ -82,8 +82,7 @@ export const AdminDashboard: React.FC = () => {
   const [data, setData] = useState<{
     users: User[];
     totalUsers: number;
-    currentPage: number;
-    totalPages: number;
+    // Removed pagination metadata
     teams: Team[];
     config: VotingConfig;
     teamVotes: Record<string, number>;
@@ -92,10 +91,8 @@ export const AdminDashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]); // Admins List State
 
-  // Pagination States
-  const [usersPage, setUsersPage] = useState(1);
-  const [usersPageSize, setUsersPageSize] = useState(10);
-  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  // Pagination States (Transactions only now)
+  // Users pagination removed
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsPageSize, setTransactionsPageSize] = useState(20);
   const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
@@ -271,13 +268,9 @@ export const AdminDashboard: React.FC = () => {
 
   async function refreshData() {
     try {
-      const d = await api.getAdminData(
-        usersPage,
-        usersPageSize,
-        debouncedUsersSearch,
-      );
+      const d = await api.getAdminData(debouncedUsersSearch);
       setData(d);
-      setUsersTotalPages(d.totalPages || 1);
+      // setUsersTotalPages(d.totalPages || 1); // Removed
       // Only sync form if it's the first load (data was null)
       if (d && d.config && !data) {
         setConfigForm({
@@ -336,10 +329,10 @@ export const AdminDashboard: React.FC = () => {
     debouncedTransactionsSearch,
   ]);
 
-  // Refetch users when page, page size, or search changes
+  // Refetch users when search changes
   useEffect(() => {
     refreshData();
-  }, [usersPage, usersPageSize, debouncedUsersSearch]);
+  }, [debouncedUsersSearch]);
 
   if (!data)
     return (
@@ -1529,18 +1522,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Pagination */}
-          <Pagination
-            currentPage={usersPage}
-            totalPages={usersTotalPages}
-            onPageChange={(page: number) => setUsersPage(page)}
-            pageSize={usersPageSize}
-            onPageSizeChange={(size) => {
-              setUsersPageSize(size);
-              setUsersPage(1); // Reset to first page when changing page size
-            }}
-            className="mt-6"
-          />
+          {/* Pagination Removed for Users */}
         </div>
       )}
 

@@ -42,7 +42,7 @@ async function authRoutes(fastify, options) {
 
         // 2. Verify user exists and password is correct
         if (!user || !(await bcrypt.compare(passwordHash, user.passwordHash))) {
-            return reply.code(401).send({ success: false, message: 'Invalid Credentials.' });
+            return reply.code(404).send({ success: false, message: 'Invalid Credentials.' });
         }
 
         // 3. Single Session Enforcement Logic
@@ -83,7 +83,7 @@ async function authRoutes(fastify, options) {
 
         // 2. Verify admin exists and password is correct
         if (!admin || !(await bcrypt.compare(password, admin.passwordHash))) {
-            return reply.code(401).send({ success: false, message: 'Invalid Admin Credentials.' });
+            return reply.code(404).send({ success: false, message: 'Invalid Admin Credentials.' });
         }
 
         // 3. Single Session Enforcement Logic
@@ -168,7 +168,7 @@ async function authRoutes(fastify, options) {
     // Admin Logout
     fastify.post('/admin-logout', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const admin = request.authAdmin;
-        console.log("request",request)
+        console.log("request", request)
 
         // Audit Log
         await AuditLog.create({

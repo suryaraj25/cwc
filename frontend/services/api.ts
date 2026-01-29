@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
@@ -32,14 +32,27 @@ export const api = {
     },
 
     login: async (identifier: string, passwordHash: string): Promise<{ success: boolean; message: string; user?: User; token?: string }> => {
-        const res = await apiClient.post(`/auth/login`, { identifier, passwordHash });
-        // No localStorage setItem needed, cookie is set automatically
-        return res.data;
+        try {
+            const res = await apiClient.post(`/auth/login`, { identifier, passwordHash });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 
     adminLogin: async (username: string, password: string): Promise<{ success: boolean; message: string; adminId?: string; role?: string; admin?: User }> => {
-        const res = await apiClient.post(`/auth/admin-login`, { username, password });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/auth/admin-login`, { username, password });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 
     logout: async (user: User): Promise<{ success: boolean; message: string }> => {
@@ -123,8 +136,8 @@ export const api = {
     },
 
     // Admin
-    getAdminData: async (page = 1, limit = 10, search = ''): Promise<{ users: User[], totalUsers: number, currentPage: number, totalPages: number, teams: Team[], config: VotingConfig, teamVotes: Record<string, number>, deviceCount: number }> => {
-        const res = await apiClient.get(`/admin/dashboard?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+    getAdminData: async (search = ''): Promise<{ users: User[], totalUsers: number, teams: Team[], config: VotingConfig, teamVotes: Record<string, number>, deviceCount: number }> => {
+        const res = await apiClient.get(`/admin/dashboard?search=${encodeURIComponent(search)}`);
         return res.data;
     },
 

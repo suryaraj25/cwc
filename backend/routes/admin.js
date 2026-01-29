@@ -7,12 +7,9 @@ const Admin = require('../models/Admin');
 
 async function adminRoutes(fastify, options) {
 
-    // Get Dashboard Data with Pagination and Search
+    // Get Dashboard Data (No Pagination)
     fastify.get('/dashboard', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
-        const page = parseInt(request.query.page) || 1;
-        const limit = parseInt(request.query.limit) || 10;
         const search = request.query.search || '';
-        const skip = (page - 1) * limit;
 
         // Build search query
         const searchQuery = search ? {
@@ -24,9 +21,9 @@ async function adminRoutes(fastify, options) {
             ]
         } : {};
 
-        // Get paginated users with search
+        // Get all users with search
         const [users, totalUsers] = await Promise.all([
-            User.find(searchQuery).skip(skip).limit(limit).select('-hashedPassword'),
+            User.find(searchQuery).select('-hashedPassword'),
             User.countDocuments(searchQuery)
         ]);
 
@@ -50,8 +47,6 @@ async function adminRoutes(fastify, options) {
         return {
             users,
             totalUsers,
-            currentPage: page,
-            totalPages: Math.ceil(totalUsers / limit),
             teams,
             config,
             teamVotes,

@@ -80,6 +80,7 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
             login(loginResult.user);
             navigate("/dashboard");
           } else {
+            console.log("loginResult", loginResult);
             setError(loginResult.message);
           }
         } else {
@@ -97,14 +98,17 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
           formData.password,
         );
         if (result.success && result.user) {
+          console.log("result", result);
           localStorage.setItem("cwc_voting_user_id", result.user.id);
           login(result.user);
           navigate("/dashboard");
         } else {
+          console.log("result", result);
           setError(result.message);
         }
       }
     } catch (err: any) {
+      console.log("err", err.message);
       setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
