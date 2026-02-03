@@ -12,6 +12,7 @@ export interface User {
   votes: Record<string, number>; // teamId -> count
   lastVotedAt?: string;
   currentSessionToken?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface Team {

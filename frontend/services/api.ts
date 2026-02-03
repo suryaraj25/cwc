@@ -92,6 +92,18 @@ export const api = {
         return res.data;
     },
 
+    changePassword: async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+        try {
+            const res = await apiClient.post(`/auth/change-password`, { currentPassword, newPassword });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
+    },
+
     // Teams
     getTeams: async (): Promise<Team[]> => {
         const res = await apiClient.get(`/teams`);

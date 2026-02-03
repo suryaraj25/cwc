@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true },
     boundDeviceId: { type: String, default: null }, // Kept for legacy/audit, though logic removed
     currentSessionToken: { type: String, default: null }, // For Single Session Enforcement
+    mustChangePassword: { type: Boolean, default: false }, // Set to true when admin resets password
     votes: {
         type: Map,
         of: Number,

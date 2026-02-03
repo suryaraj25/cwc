@@ -71,7 +71,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
   ];
 
   return (
-    <div className="admin-glass p-2 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 sticky top-4 z-30 mx-0.5 no-print ring-1 ring-white/5">
+    <div className="admin-glass p-2 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4  top-4 z-30 mx-0.5 no-print ring-1 ring-white/5">
       <div className="flex gap-1 overflow-x-auto w-full md:w-auto p-1 scrollbar-hide">
         {tabs.map((tab) => (
           <button
@@ -88,9 +88,9 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
         ))}
       </div>
 
-      <div className="flex items-center gap-4 px-3 w-full md:w-auto justify-between md:justify-end">
+      <div className="flex flex-col sm:flex-row items-center gap-x-2 gap-y-4 sm:gap-4 px-2 sm:px-3 w-full md:w-auto">
         <div
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border w-full sm:w-auto justify-center ${
             config.isVotingOpen
               ? "bg-green-500/10 border-green-500/20"
               : "bg-red-500/10 border-red-500/20"
@@ -106,7 +106,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
               config.isVotingOpen ? "text-green-400" : "text-red-400"
             }`}
           >
-            {config.isVotingOpen ? "System Online" : "System Locked"}
+            {config.isVotingOpen ? "Online" : "Locked"}
           </span>
         </div>
         <Button
@@ -115,15 +115,15 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             config.isVotingOpen
               ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
               : "bg-green-600 text-white hover:bg-green-500"
-          } border-0 px-6 py-2 rounded-xl transition-all font-bold whitespace-nowrap`}
+          } border-0 px-4 sm:px-6 py-2 rounded-xl transition-all font-bold whitespace-nowrap w-full sm:w-auto text-sm`}
         >
           {config.isVotingOpen ? (
             <>
-              <Pause size={16} className="mr-2" /> Pause Voting
+              <Pause size={16} className="mr-1.5" /> Pause
             </>
           ) : (
             <>
-              <Play size={16} className="mr-2" /> Start Session
+              <Play size={16} className="mr-1.5" /> Start
             </>
           )}
         </Button>

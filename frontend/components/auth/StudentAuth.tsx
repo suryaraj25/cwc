@@ -8,7 +8,7 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
-import { UserPlus, LogIn, Lock, AlertCircle } from "lucide-react";
+import { UserPlus, LogIn, Lock, AlertCircle, KeyRound } from "lucide-react";
 
 interface StudentAuthProps {}
 
@@ -20,6 +20,15 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Password change state
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [passwordChangeForm, setPasswordChangeForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: "",
+  });
 
   // Form State
   const [formData, setFormData] = useState({
@@ -39,6 +48,50 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
+  };
+
+  const handlePasswordChangeInput = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setPasswordChangeForm({
+      ...passwordChangeForm,
+      [e.target.name]: e.target.value,
+    });
+    setError(null);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (
+        passwordChangeForm.newPassword !== passwordChangeForm.confirmNewPassword
+      ) {
+        throw new Error("New passwords do not match");
+      }
+      if (passwordChangeForm.newPassword.length < 6) {
+        throw new Error("New password must be at least 6 characters");
+      }
+
+      const result = await api.changePassword(
+        passwordChangeForm.currentPassword,
+        passwordChangeForm.newPassword,
+      );
+
+      if (result.success && pendingUser) {
+        // Password changed successfully, proceed to dashboard
+        login(pendingUser);
+        navigate("/dashboard");
+      } else {
+        setError(result.message || "Failed to change password");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,8 +153,20 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
         if (result.success && result.user) {
           console.log("result", result);
           localStorage.setItem("cwc_voting_user_id", result.user.id);
-          login(result.user);
-          navigate("/dashboard");
+
+          // Check if user must change password
+          if (result.user.mustChangePassword) {
+            setPendingUser(result.user);
+            setMustChangePassword(true);
+            setPasswordChangeForm({
+              currentPassword: formData.password, // Pre-fill with login password
+              newPassword: "",
+              confirmNewPassword: "",
+            });
+          } else {
+            login(result.user);
+            navigate("/dashboard");
+          }
         } else {
           console.log("result", result);
           setError(result.message);
@@ -114,6 +179,69 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
       setLoading(false);
     }
   };
+
+  // Password Change Form UI
+  if (mustChangePassword) {
+    return (
+      <div className="max-w-md w-full mx-auto animate-fade-in-up">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 mb-4 ring-2 ring-amber-500/50">
+            <KeyRound className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-2">
+            Change Password
+          </h2>
+          <p className="text-slate-400 text-sm">
+            Your password was reset by an administrator. Please set a new
+            password to continue.
+          </p>
+        </div>
+
+        <Card className="border-t-4 border-t-amber-500">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mb-6 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <Input
+              label="Current Password"
+              type="password"
+              name="currentPassword"
+              value={passwordChangeForm.currentPassword}
+              onChange={handlePasswordChangeInput}
+              placeholder="Enter your current password"
+              required
+            />
+            <Input
+              label="New Password"
+              type="password"
+              name="newPassword"
+              value={passwordChangeForm.newPassword}
+              onChange={handlePasswordChangeInput}
+              placeholder="Enter new password (min 6 chars)"
+              required
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              name="confirmNewPassword"
+              value={passwordChangeForm.confirmNewPassword}
+              onChange={handlePasswordChangeInput}
+              placeholder="Confirm new password"
+              required
+            />
+
+            <Button type="submit" className="w-full mt-6" isLoading={loading}>
+              <KeyRound className="w-4 h-4 mr-2" /> Update Password
+            </Button>
+          </form>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md w-full mx-auto animate-fade-in-up">

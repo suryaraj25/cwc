@@ -151,6 +151,43 @@ async function authRoutes(fastify, options) {
         const user = await User.findById(request.params.id);
         return user;
     });
+
+    // Change Password (for users who must change after admin reset)
+    fastify.post('/change-password', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+        const { currentPassword, newPassword } = request.body;
+        const user = request.authUser;
+
+        // Validate inputs
+        if (!currentPassword || !newPassword) {
+            return reply.code(400).send({ success: false, message: 'Current password and new password are required' });
+        }
+
+        if (newPassword.length < 6) {
+            return reply.code(400).send({ success: false, message: 'New password must be at least 6 characters long' });
+        }
+
+        // Verify current password
+        if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+            return reply.code(400).send({ success: false, message: 'Current password is incorrect' });
+        }
+
+        // Hash new password and save
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.passwordHash = hashedPassword;
+        user.mustChangePassword = false; // Clear the flag
+        await user.save();
+
+        // Audit Log
+        await AuditLog.create({
+            userId: user._id,
+            userType: 'USER',
+            action: 'PASSWORD_CHANGE',
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
+
+        return { success: true, message: 'Password changed successfully' };
+    });
     // Logout
     fastify.post('/logout', { onRequest: [fastify.authenticate] }, async (request, reply) => {
         // Clear session on server (optional since we rotate token on login, but good practice)

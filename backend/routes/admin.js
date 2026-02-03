@@ -225,6 +225,8 @@ async function adminRoutes(fastify, options) {
         user.passwordHash = hashedPassword;
         // Invalidate current sessions if any
         user.currentSessionToken = null;
+        // Force user to change password on next login
+        user.mustChangePassword = true;
 
         await user.save();
 

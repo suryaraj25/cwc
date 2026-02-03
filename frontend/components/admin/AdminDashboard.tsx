@@ -1004,7 +1004,7 @@ export const AdminDashboard: React.FC = () => {
       {/* --- TRANSACTIONS TAB --- */}
       {activeTab === "transactions" && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+          <div className="flex max-sm:flex-col max-sm:gap-y-4 justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
             <div>
               <h3 className="text-2xl font-bold text-white">Voting Log</h3>
               <p className="text-sm text-slate-400">
@@ -1166,7 +1166,7 @@ export const AdminDashboard: React.FC = () => {
       )}
       {activeTab === "teams" && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
+          <div className="flex max-sm:flex-col max-sm:gap-y-4 justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
             <div>
               <h3 className="text-2xl font-bold text-white">Manage Teams</h3>
               <p className="text-sm text-slate-400">
@@ -1333,48 +1333,48 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === "users" && (
         <div className="space-y-6">
           {/* Report Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg no-print">
-            <div>
-              <h3 className="text-2xl font-bold text-white">
-                Student Registry
-              </h3>
-              <p className="text-sm text-slate-400">
-                View participation logs and generate reports.
-              </p>
-            </div>
-            <div className="flex gap-3">
+          <div className="flex flex-col gap-4 bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 shadow-lg no-print">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                  Student Registry
+                </h3>
+                <p className="text-sm text-slate-400">
+                  View participation logs and generate reports.
+                </p>
+              </div>
               <Button
                 onClick={handleDetailedReport}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
               >
-                <FileSpreadsheet className="w-4 h-4 mr-2" /> Download Raw CSV
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Download CSV
               </Button>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search by name, roll number, email, or department..."
-                  className="w-full md:w-80 bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                  value={usersSearchInput}
-                  onChange={(e: { target: { value: any } }) =>
-                    setUsersSearchInput(e.target.value)
-                  }
-                />
-              </div>
+            </div>
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by name, roll, email, dept..."
+                className="w-full bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                value={usersSearchInput}
+                onChange={(e: { target: { value: any } }) =>
+                  setUsersSearchInput(e.target.value)
+                }
+              />
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
-              <table className="w-full text-left text-sm min-w-[768px]">
+          {/* Data Table - Desktop View */}
+          <div className="hidden md:block bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-slate-900/50 text-slate-400 font-bold uppercase tracking-wider text-xs border-b border-slate-700">
                   <tr>
-                    <th className="p-5 w-10 no-print"></th>
-                    <th className="p-5">Student Identity</th>
-                    <th className="p-5">Department</th>
-                    <th className="p-5 text-center">Votes Cast</th>
-                    <th className="p-5 text-right">Last Activity</th>
+                    <th className="p-4 w-10 no-print"></th>
+                    <th className="p-4">Student Identity</th>
+                    <th className="p-4">Department</th>
+                    <th className="p-4 text-center">Votes Cast</th>
+                    <th className="p-4 text-right">Last Activity</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
@@ -1388,14 +1388,14 @@ export const AdminDashboard: React.FC = () => {
                           )
                         }
                       >
-                        <td className="p-5 text-slate-600 group-hover:text-indigo-400 transition-colors no-print">
+                        <td className="p-4 text-slate-600 group-hover:text-indigo-400 transition-colors no-print">
                           {expandedUser === user.id ? (
                             <ChevronDown size={16} />
                           ) : (
                             <ChevronRight size={16} />
                           )}
                         </td>
-                        <td className="p-5">
+                        <td className="p-4">
                           <div className="font-bold text-white text-base flex items-center gap-2">
                             {user.name}{" "}
                             <span
@@ -1406,10 +1406,10 @@ export const AdminDashboard: React.FC = () => {
                             {user.rollNo}
                           </div>
                         </td>
-                        <td className="p-5 text-slate-400 font-medium max-w-[200px] truncate">
+                        <td className="p-4 text-slate-400 font-medium max-w-[200px] truncate">
                           {user.dept}
                         </td>
-                        <td className="p-5 text-center">
+                        <td className="p-4 text-center">
                           <span
                             className={`inline-flex items-center justify-center min-w-[32px] h-8 rounded-lg text-xs font-bold ${Object.keys(user.votes).length > 0 ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-700 text-slate-500"}`}
                           >
@@ -1419,7 +1419,7 @@ export const AdminDashboard: React.FC = () => {
                             )}
                           </span>
                         </td>
-                        <td className="p-5 text-right text-slate-500 text-xs font-mono">
+                        <td className="p-4 text-right text-slate-500 text-xs font-mono">
                           {user.lastVotedAt
                             ? new Date(user.lastVotedAt).toLocaleString()
                             : "---"}
@@ -1553,7 +1553,7 @@ export const AdminDashboard: React.FC = () => {
                                     </span>
                                   </div>
 
-                                  <div className="pt-4 mt-4 border-t border-slate-700 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <div className="pt-4 mt-4 border-t border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {adminRole === "SUPER_ADMIN" && (
                                       <>
                                         <Button
@@ -1610,89 +1610,237 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {data.users.map((user: User) => (
+              <div
+                key={user.id}
+                className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"
+              >
+                {/* Card Header - Always Visible */}
+                <div
+                  className="p-4 cursor-pointer active:bg-slate-700/30"
+                  onClick={() =>
+                    setExpandedUser(expandedUser === user.id ? null : user.id)
+                  }
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {expandedUser === user.id ? (
+                          <ChevronDown size={16} className="text-indigo-400" />
+                        ) : (
+                          <ChevronRight size={16} className="text-slate-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white text-sm flex items-center gap-2">
+                          <span className="truncate">{user.name}</span>
+                          <span
+                            className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${onlineUsers.has(user.id) ? "bg-green-500 animate-pulse" : "bg-slate-500"}`}
+                          ></span>
+                        </div>
+                        <div className="text-xs font-mono text-indigo-400">
+                          {user.rollNo}
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={`flex-shrink-0 ml-2 inline-flex items-center justify-center min-w-[28px] h-7 rounded-lg text-xs font-bold ${Object.keys(user.votes).length > 0 ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-700 text-slate-500"}`}
+                    >
+                      {Object.values(user.votes).reduce(
+                        (a: number, b: number) => a + b,
+                        0,
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span className="text-slate-400 truncate max-w-[60%]">
+                      {user.dept}
+                    </span>
+                    <span className="text-slate-500 font-mono">
+                      {user.lastVotedAt
+                        ? new Date(user.lastVotedAt).toLocaleDateString()
+                        : "---"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Expanded Content */}
+                {expandedUser === user.id && (
+                  <div className="border-t border-slate-700 p-4 bg-slate-900/40 space-y-4">
+                    {/* Vote Breakdown */}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Vote Breakdown
+                      </h4>
+                      <div className="bg-slate-800 rounded-xl border border-slate-700 p-3 space-y-2">
+                        {Object.keys(user.votes).length > 0 ? (
+                          Object.entries(user.votes).map(([tid, count]) => {
+                            const team = data.teams.find(
+                              (t: { id: string }) => t.id === tid,
+                            );
+                            return (
+                              <div
+                                key={tid}
+                                className="flex justify-between items-center p-2 rounded-lg bg-slate-700/30"
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {team?.imageUrl && (
+                                    <img
+                                      src={team.imageUrl}
+                                      className="w-6 h-6 rounded-md object-cover flex-shrink-0"
+                                      alt=""
+                                    />
+                                  )}
+                                  <span className="text-slate-200 text-sm font-medium truncate">
+                                    {team?.name || "Unknown Team"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className="font-bold text-white bg-slate-900 px-2 py-0.5 rounded-md text-xs">
+                                    {count}
+                                  </span>
+                                  {adminRole === "SUPER_ADMIN" && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        showModal(
+                                          "Delete Team Votes",
+                                          `Delete ${count} vote(s) for "${team?.name || "this team"}"?`,
+                                          "warning",
+                                          async () => {
+                                            try {
+                                              await api.deleteUserTeamVotes(
+                                                user.id,
+                                                tid,
+                                              );
+                                              toast.success(
+                                                `Votes for ${team?.name || "team"} deleted`,
+                                              );
+                                              refreshData();
+                                            } catch (error: any) {
+                                              toast.error(
+                                                error.response?.data?.message ||
+                                                  "Failed to delete team votes",
+                                              );
+                                            }
+                                          },
+                                          {
+                                            confirmVariant: "destructive",
+                                            confirmLabel: "Delete",
+                                          },
+                                        );
+                                      }}
+                                      className="p-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-slate-500 text-sm italic">
+                            No votes cast yet.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contact Details */}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Contact
+                      </h4>
+                      <div className="bg-slate-800 rounded-xl border border-slate-700 p-3 text-sm space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Email</span>
+                          <span className="text-slate-200 font-medium text-xs truncate max-w-[60%]">
+                            {user.email}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Phone</span>
+                          <span className="text-slate-200 font-medium">
+                            {user.phone}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Year / Gender</span>
+                          <span className="text-slate-200 font-medium">
+                            {user.year} / {user.gender}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Device ID</span>
+                          <span className="text-indigo-400 font-mono text-xs truncate max-w-[50%]">
+                            {user.boundDeviceId
+                              ? user.boundDeviceId.substring(0, 12) + "..."
+                              : "Unbound"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {adminRole === "SUPER_ADMIN" && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            className="flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs py-2"
+                            onClick={() => openResetPasswordModal(user.id)}
+                          >
+                            <Lock size={14} /> Reset PW
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            className="flex items-center justify-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 text-xs py-2"
+                            onClick={() => handleForceLogout(user.id)}
+                          >
+                            <LogOut size={14} /> Logout
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="danger"
+                        className="flex items-center justify-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-white border border-red-500/20 text-xs py-2"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <UserCog size={14} /> Del User
+                      </Button>
+                      {adminRole === "SUPER_ADMIN" && (
+                        <Button
+                          variant="danger"
+                          className="flex items-center justify-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 text-xs py-2"
+                          onClick={() => handleDeleteVotes(user.id)}
+                        >
+                          <Trash2 size={14} /> Del Votes
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {data.users.length === 0 && (
+              <div className="py-12 text-center text-slate-500 bg-slate-800/30 rounded-2xl border border-slate-700">
+                <Users className="mx-auto h-12 w-12 text-slate-600 mb-4" />
+                <p>No students found.</p>
+              </div>
+            )}
+          </div>
+
           {/* Pagination Removed for Users */}
         </div>
       )}
 
-      {/* --- DEVICES TAB --- */}
-      {/* {activeTab === 'devices' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="admin-glass rounded-2xl p-8 border-l-4 border-l-orange-500">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-orange-500/20 rounded-xl"><RotateCcw className="text-orange-500" /></div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white">Emergency Device Reset</h3>
-                                <p className="text-sm text-slate-400">Unbind a student from their registered device.</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-orange-900/20 p-4 rounded-xl border border-orange-500/20 mb-6">
-                            <p className="text-sm text-orange-200 flex items-start gap-2">
-                                <AlertTriangle className="w-5 h-5 shrink-0" />
-                                <span>This action is irreversible. The student will be allowed to login from a new device immediately. Only use for lost devices.</span>
-                            </p>
-                        </div>
-
-                        <form onSubmit={handleRevoke}>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Student Roll No or Email</label>
-                            <div className="flex gap-2">
-                                <input
-                                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                                    value={revokeQuery}
-                                    onChange={(e) => { setRevokeQuery(e.target.value); setRevokeMessage(''); }}
-                                    placeholder="e.g. 7376..."
-                                />
-                                <Button variant="danger" type="submit" className="px-6 bg-orange-600 hover:bg-orange-700 rounded-xl font-bold">
-                                    Unbind Device
-                                </Button>
-                            </div>
-                        </form>
-
-                        {revokeMessage && (
-                            <div className={`mt-4 p-4 rounded-xl border ${revokeMessage.includes('Error') ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
-                                <p className="font-medium text-sm">{revokeMessage}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden flex flex-col h-[500px]">
-                        <div className="p-6 border-b border-slate-700 bg-slate-800">
-                            <h3 className="text-lg font-bold text-white">Active Sessions</h3>
-                            <p className="text-xs text-slate-400 mt-1">Real-time device bindings.</p>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-                            {data.users.filter(u => u.boundDeviceId).map((u, i) => (
-                                <div key={u.id} className="flex items-center justify-between p-4 border-b border-slate-700 hover:bg-slate-700/20 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-sm">
-                                            {i + 1}
-                                        </div>
-                                        <div>
-                                            <p className="text-white font-bold text-sm">{u.name}</p>
-                                            <p className="text-xs text-slate-500 font-mono">{u.boundDeviceId?.substring(0, 16)}...</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                        <span className="text-xs text-green-400 font-bold uppercase">Online</span>
-                                    </div>
-                                </div>
-                            ))}
-                            {data.users.filter(u => u.boundDeviceId).length === 0 && (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                                    <Smartphone size={48} className="mb-2 opacity-20" />
-                                    <p>No active devices.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )} */}
-
       {activeTab === "admins" && (
         <div className="max-w-7xl mx-auto">
           <div className="admin-glass rounded-2xl p-8 mb-6 border-l-4 border-l-indigo-500">
-            <div className="flex justify-between items-center">
+            <div className="flex max-sm:flex-col max-sm:gap-y-6 justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold text-white">
                   Administrator Management
@@ -1889,7 +2037,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end max-sm:justify-center pt-4">
                 <Button type="submit" className="px-8 py-3 text-lg">
                   Save Schedule
                 </Button>
