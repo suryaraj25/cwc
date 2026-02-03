@@ -243,12 +243,10 @@ async function adminRoutes(fastify, options) {
         return { success: true, message: 'Password reset successfully' };
     });
 
-    // Delete User (Super Admin Only)
+    // Delete User (All Admins)
     fastify.delete('/users/:id', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
-        // PROTECT: Only Super Admin can delete users
-        if (request.authAdmin.role !== 'SUPER_ADMIN') {
-            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
-        }
+        // PERMISSION: All Admins can delete users (as per partial Super Admin requirement)
+        // if (request.authAdmin.role !== 'SUPER_ADMIN') { ... } // REMOVED RESTRICTION
 
         const userId = request.params.id;
         const user = await User.findById(userId);
@@ -279,6 +277,101 @@ async function adminRoutes(fastify, options) {
         if (fastify.io) fastify.io.emit('admin:data-update');
 
         return { success: true, message: 'User deleted successfully' };
+    });
+
+    // Delete User Votes (Super Admin Only)
+    fastify.delete('/users/:id/votes', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can delete votes
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
+        const userId = request.params.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return reply.code(404).send({ success: false, message: 'User not found' });
+        }
+
+        // Reset user votes
+        user.votes = new Map(); // Clear votes map
+        // user.lastVotedAt = null; // Optional: Keep timestamp or reset? Resetting implies they haven't voted.
+        // Let's reset lastVotedAt so they look fresh, or maybe keep it track they *had* voted?
+        // Usually "Delete Votes" means let them vote again or fix a mistake. 
+        // If we just clear votes but keep lastVotedAt, UI might still show "Active just now".
+        // Let's clear lastVotedAt to be safe/clean.
+        user.lastVotedAt = null;
+
+        await user.save();
+
+        // Delete Transactions
+        await VoteTransaction.deleteMany({ userId: userId });
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'DELETE_USER_VOTES',
+                details: `Deleted votes for user ${user.email} (${user.rollNo})`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
+        return { success: true, message: 'User votes deleted successfully' };
+    });
+
+    // Delete User Votes for Specific Team (Super Admin Only)
+    fastify.delete('/users/:userId/votes/:teamId', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        // PROTECT: Only Super Admin can delete votes
+        if (request.authAdmin.role !== 'SUPER_ADMIN') {
+            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
+        }
+
+        const { userId, teamId } = request.params;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return reply.code(404).send({ success: false, message: 'User not found' });
+        }
+
+        // Check if user has votes for this team
+        if (!user.votes || !user.votes.has(teamId)) {
+            return reply.code(404).send({ success: false, message: 'No votes found for this team' });
+        }
+
+        // Remove votes for this specific team
+        user.votes.delete(teamId);
+
+        // If no more votes remain, optionally reset lastVotedAt
+        if (user.votes.size === 0) {
+            user.lastVotedAt = null;
+        }
+
+        await user.save();
+
+        // Delete only transactions for this team
+        await VoteTransaction.deleteMany({ userId: userId, teamId: teamId });
+
+        // Audit Log
+        const team = await Team.findById(teamId);
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'DELETE_USER_TEAM_VOTES',
+                details: `Deleted votes for team "${team?.name || teamId}" from user ${user.email} (${user.rollNo})`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        if (fastify.io) fastify.io.emit('admin:data-update');
+
+        return { success: true, message: `Votes for team deleted successfully` };
     });
 
     // Force Logout User (Super Admin Only)

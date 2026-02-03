@@ -558,6 +558,26 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  const handleDeleteVotes = (userId: string) => {
+    showModal(
+      "Delete User Votes",
+      "Are you sure you want to delete ONLY the votes for this user? This will clear their engaged votes but keep the user account active.",
+      "warning",
+      async () => {
+        try {
+          await api.deleteUserVotes(userId);
+          toast.success("User votes deleted successfully");
+          refreshData();
+        } catch (error: any) {
+          toast.error(
+            error.response?.data?.message || "Failed to delete user votes",
+          );
+        }
+      },
+      { confirmVariant: "destructive", confirmLabel: "Delete Votes" },
+    );
+  };
+
   // --- REPORT GENERATION ---
 
   // 1. Transactional CSV (Raw Data)
@@ -1438,9 +1458,50 @@ export const AdminDashboard: React.FC = () => {
                                                 {team?.name || "Unknown Team"}
                                               </span>
                                             </div>
-                                            <span className="font-bold text-white bg-slate-900 px-3 py-1 rounded-md text-xs">
-                                              {count} Votes
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-bold text-white bg-slate-900 px-3 py-1 rounded-md text-xs">
+                                                {count} Votes
+                                              </span>
+                                              {adminRole === "SUPER_ADMIN" && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    showModal(
+                                                      "Delete Team Votes",
+                                                      `Are you sure you want to delete ${count} vote(s) for "${team?.name || "this team"}" from this user?`,
+                                                      "warning",
+                                                      async () => {
+                                                        try {
+                                                          await api.deleteUserTeamVotes(
+                                                            user.id,
+                                                            tid,
+                                                          );
+                                                          toast.success(
+                                                            `Votes for ${team?.name || "team"} deleted`,
+                                                          );
+                                                          refreshData();
+                                                        } catch (error: any) {
+                                                          toast.error(
+                                                            error.response?.data
+                                                              ?.message ||
+                                                              "Failed to delete team votes",
+                                                          );
+                                                        }
+                                                      },
+                                                      {
+                                                        confirmVariant:
+                                                          "destructive",
+                                                        confirmLabel: "Delete",
+                                                      },
+                                                    );
+                                                  }}
+                                                  className="p-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                                  title="Delete votes for this team"
+                                                >
+                                                  <Trash2 size={14} />
+                                                </button>
+                                              )}
+                                            </div>
                                           </div>
                                         );
                                       },
@@ -1492,37 +1553,50 @@ export const AdminDashboard: React.FC = () => {
                                     </span>
                                   </div>
 
-                                  {adminRole === "SUPER_ADMIN" && (
-                                    <div className="pt-4 mt-4 border-t border-slate-700 flex gap-3">
-                                      <Button
-                                        variant="secondary"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200"
-                                        onClick={() =>
-                                          openResetPasswordModal(user.id)
-                                        }
-                                      >
-                                        <Lock size={16} /> Reset Password
-                                      </Button>
+                                  <div className="pt-4 mt-4 border-t border-slate-700 grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                    {adminRole === "SUPER_ADMIN" && (
+                                      <>
+                                        <Button
+                                          variant="secondary"
+                                          className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200"
+                                          onClick={() =>
+                                            openResetPasswordModal(user.id)
+                                          }
+                                        >
+                                          <Lock size={16} /> Reset PW
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
+                                          className="flex items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20"
+                                          onClick={() =>
+                                            handleForceLogout(user.id)
+                                          }
+                                        >
+                                          <LogOut size={16} /> Logout
+                                        </Button>
+                                      </>
+                                    )}
+
+                                    <Button
+                                      variant="danger"
+                                      className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-white border border-red-500/20"
+                                      onClick={() => handleDeleteUser(user.id)}
+                                    >
+                                      <UserCog size={16} /> Del User
+                                    </Button>
+
+                                    {adminRole === "SUPER_ADMIN" && (
                                       <Button
                                         variant="danger"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-white border border-red-500/20"
+                                        className="flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20"
                                         onClick={() =>
-                                          handleDeleteUser(user.id)
+                                          handleDeleteVotes(user.id)
                                         }
                                       >
-                                        <Trash2 size={16} /> Delete User
+                                        <Trash2 size={16} /> Del Votes
                                       </Button>
-                                      <Button
-                                        variant="secondary"
-                                        className="flex-1 flex items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20"
-                                        onClick={() =>
-                                          handleForceLogout(user.id)
-                                        }
-                                      >
-                                        <LogOut size={16} /> Force Logout
-                                      </Button>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>

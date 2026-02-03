@@ -1,4 +1,6 @@
 const Team = require('../models/Team');
+const User = require('../models/User');
+const VoteTransaction = require('../models/VoteTransaction');
 
 async function teamRoutes(fastify, options) {
 
@@ -23,11 +25,29 @@ async function teamRoutes(fastify, options) {
         return team;
     });
 
-    // Delete Team
+    // Delete Team (Cascade: removes votes for this team from all users)
     fastify.delete('/:id', async (request, reply) => {
-        await Team.findByIdAndDelete(request.params.id);
+        const teamId = request.params.id;
+
+        // 1. Delete team document
+        await Team.findByIdAndDelete(teamId);
+
+        // 2. Delete all vote transactions for this team
+        await VoteTransaction.deleteMany({ teamId: teamId });
+
+        // 3. Remove this team's votes from all users
+        const usersWithVotes = await User.find({ [`votes.${teamId}`]: { $exists: true } });
+        for (const user of usersWithVotes) {
+            user.votes.delete(teamId);
+            // If no more votes, reset lastVotedAt
+            if (user.votes.size === 0) {
+                user.lastVotedAt = null;
+            }
+            await user.save();
+        }
+
         if (fastify.io) fastify.io.emit('admin:data-update');
-        return { success: true };
+        return { success: true, message: 'Team deleted and user votes cleared' };
     });
 }
 

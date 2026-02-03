@@ -140,6 +140,16 @@ export const api = {
         return res.data;
     },
 
+    deleteUserVotes: async (userId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.delete(`/admin/users/${userId}/votes`);
+        return res.data;
+    },
+
+    deleteUserTeamVotes: async (userId: string, teamId: string): Promise<{ success: boolean; message: string }> => {
+        const res = await apiClient.delete(`/admin/users/${userId}/votes/${teamId}`);
+        return res.data;
+    },
+
     resetPassword: async (userId: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
         const res = await apiClient.post(`/admin/reset-password`, { userId, newPassword });
         return res.data;
