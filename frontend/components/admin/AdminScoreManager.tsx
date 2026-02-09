@@ -202,8 +202,15 @@ export const AdminScoreManager: React.FC = () => {
               selectedDate,
               score.notes,
             );
-            if (result.success) successCount++;
-            else failCount++;
+            if (result.success) {
+              successCount++;
+              // Update local state with scoreId
+              const scoreId =
+                result.teamScore?._id || result.teamScore?.id || null;
+              handleScoreChange(team.id, score.score, scoreId);
+            } else {
+              failCount++;
+            }
           } catch {
             failCount++;
           }
@@ -212,10 +219,26 @@ export const AdminScoreManager: React.FC = () => {
 
       if (successCount > 0) {
         toast.success(`Saved ${successCount} team scores!`);
+        // Refresh data to ensure consistency
+        const scoresData = await api.getDailyLeaderboard(selectedDate);
+        const scoreMap: Record<
+          string,
+          { score: number; notes: string; scoreId: string | null }
+        > = {};
+        scoresData.leaderboard?.forEach((team: any) => {
+          scoreMap[team.id] = {
+            score: team.score || 0,
+            notes: team.notes || "",
+            scoreId: team.scoreId || null,
+          };
+        });
+        setDailyScores(scoreMap);
       }
       if (failCount > 0) {
         toast.error(`Failed to save ${failCount} scores`);
       }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save scores");
     } finally {
       setSaving(false);
     }
@@ -246,14 +269,14 @@ export const AdminScoreManager: React.FC = () => {
             onChange={(e) => setSelectedDate(e.target.value)}
             className="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-700 focus:border-indigo-500 outline-none"
           />
-          <Button
+          {/* <Button
             onClick={saveAllScores}
             isLoading={saving}
             className="bg-green-600 hover:bg-green-500"
           >
             <Save className="w-4 h-4 mr-2" />
             Save All
-          </Button>
+          </Button> */}
         </div>
       </div>
 
