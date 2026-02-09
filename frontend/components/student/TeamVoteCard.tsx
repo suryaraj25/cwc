@@ -4,6 +4,7 @@ import { Team } from "../../types";
 interface TeamVoteCardProps {
   team: Team;
   currentVotes: number;
+  userTotalVotes: number;
   handleVoteChange: (teamId: string, delta: number) => void;
   remaining: number;
 }
@@ -11,6 +12,7 @@ interface TeamVoteCardProps {
 export const TeamVoteCard: React.FC<TeamVoteCardProps> = ({
   team,
   currentVotes,
+  userTotalVotes,
   handleVoteChange,
   remaining,
 }) => {
@@ -41,12 +43,24 @@ export const TeamVoteCard: React.FC<TeamVoteCardProps> = ({
         </button>
 
         <div className="text-center">
-          <span className="text-3xl font-bold text-white font-mono">
-            {currentVotes}
-          </span>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-            Votes
-          </p>
+          <div>
+            <span className="text-2xl font-bold text-white font-mono">
+              {userTotalVotes}
+            </span>
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest">
+              Total Votes
+            </p>
+          </div>
+          {currentVotes > 0 && (
+            <div className="mt-1 pt-1 border-t border-slate-600">
+              <span className="text-sm font-semibold text-indigo-400">
+                +{currentVotes}
+              </span>
+              <p className="text-[9px] text-indigo-400 uppercase tracking-widest">
+                This Session
+              </p>
+            </div>
+          )}
         </div>
 
         <button

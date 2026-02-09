@@ -5,11 +5,12 @@ import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
-import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock, Trophy } from "lucide-react";
 import { LoadingState } from "../ui/LoadingState";
 import { VotingClosedState } from "./VotingClosedState";
 import { TeamVoteCard } from "./TeamVoteCard";
 import { Modal, ModalProps } from "../ui/Modal";
+import { Leaderboard } from "../admin/Leaderboard";
 import { toast } from "../../stores/useToastStore";
 
 interface StudentDashboardProps {}
@@ -41,6 +42,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
     text: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // View type: voting or leaderboard
+  const [viewType, setViewType] = useState<"voting" | "leaderboard">("voting");
 
   // Modal State
   const [modalState, setModalState] = useState<ModalProps>({
@@ -193,91 +197,135 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
   // 3. Voting Interface
   return (
     <div className="space-y-8 pb-20 animate-fade-in-up">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-indigo-900/50 to-slate-900 border-indigo-500/30">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
-              <span className="text-xl font-bold text-indigo-400">
-                {user?.name?.charAt(0)}
-              </span>
-            </div>
-            <div>
-              <h3 className="font-bold text-white">{user?.name}</h3>
-              <p className="text-xs text-indigo-300 font-mono">
-                {user?.rollNo}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-slate-800 border-slate-700">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-xs text-slate-400 uppercase">Daily Quota</p>
-              <p className="text-2xl font-bold text-white">
-                {config.dailyQuota}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400 uppercase">Remaining</p>
-              <p
-                className={`text-4xl font-bold ${remaining < 10 ? "text-red-500" : "text-green-500"}`}
-              >
-                {remaining}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-slate-800 border-slate-700 flex items-center justify-center">
-          {message ? (
-            <div
-              className={`flex items-center gap-2 ${message.type === "success" ? "text-green-400" : "text-red-400"}`}
-            >
-              {message.type === "success" ? (
-                <CheckCircle2 size={20} />
-              ) : (
-                <AlertTriangle size={20} />
-              )}
-              <span className="text-sm font-medium">{message.text}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-slate-500">
-              <Clock size={20} />
-              <span className="text-sm">Session Active</span>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Voting Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teams.map((team) => {
-          const currentVotes = votes[team.id] || 0;
-          return (
-            <TeamVoteCard
-              key={team.id}
-              team={team}
-              currentVotes={currentVotes}
-              handleVoteChange={handleVoteChange}
-              remaining={remaining}
-            />
-          );
-        })}
-      </div>
-
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-50">
-        <Button
-          onClick={saveVotes}
-          isLoading={saving}
-          disabled={totalCurrentSession === 0}
-          className="w-full max-w-md shadow-2xl py-4 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
+      {/* View Type Tabs */}
+      <div className="flex gap-3 justify-center sm:justify-start">
+        <button
+          onClick={() => setViewType("voting")}
+          className={`px-6 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
+            viewType === "voting"
+              ? "bg-indigo-600 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
         >
-          Confirm & Lock {totalUsed} Votes
-        </Button>
+          <Clock className="w-4 h-4" />
+          Voting
+        </button>
+        <button
+          onClick={() => setViewType("leaderboard")}
+          className={`px-6 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
+            viewType === "leaderboard"
+              ? "bg-indigo-600 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          Leaderboard
+        </button>
       </div>
+
+      {/* Voting View */}
+      {viewType === "voting" && (
+        <div className="space-y-6">
+          {/* Header Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-gradient-to-br from-indigo-900/50 to-slate-900 border-indigo-500/30">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <span className="text-xl font-bold text-indigo-400">
+                    {user?.name?.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">{user?.name}</h3>
+                  <p className="text-xs text-indigo-300 font-mono">
+                    {user?.rollNo}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-slate-800 border-slate-700">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-slate-400 uppercase">
+                    Daily Quota
+                  </p>
+                  <p className="text-2xl font-bold text-white">
+                    {config.dailyQuota}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400 uppercase">Remaining</p>
+                  <p
+                    className={`text-4xl font-bold ${remaining < 10 ? "text-red-500" : "text-green-500"}`}
+                  >
+                    {remaining}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-slate-800 border-slate-700 flex items-center justify-center">
+              {message ? (
+                <div
+                  className={`flex items-center gap-2 ${message.type === "success" ? "text-green-400" : "text-red-400"}`}
+                >
+                  {message.type === "success" ? (
+                    <CheckCircle2 size={20} />
+                  ) : (
+                    <AlertTriangle size={20} />
+                  )}
+                  <span className="text-sm font-medium">{message.text}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-slate-500">
+                  <Clock size={20} />
+                  <span className="text-sm">Session Active</span>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Voting Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {teams.map((team) => {
+              const currentVotes = votes[team.id] || 0;
+              const userVotesForTeam =
+                (user?.votes && user.votes[team.id]) || 0;
+              return (
+                <TeamVoteCard
+                  key={team.id}
+                  team={team}
+                  currentVotes={currentVotes}
+                  userTotalVotes={userVotesForTeam}
+                  handleVoteChange={handleVoteChange}
+                  remaining={remaining}
+                />
+              );
+            })}
+          </div>
+
+          {/* Floating Action Button */}
+          <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-50">
+            <Button
+              onClick={saveVotes}
+              isLoading={saving}
+              disabled={totalCurrentSession === 0}
+              className="w-full max-w-md shadow-2xl py-4 text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
+            >
+              Confirm & Lock {totalUsed} Votes
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard View */}
+      {viewType === "leaderboard" && (
+        <div className="space-y-6">
+          <Leaderboard />
+        </div>
+      )}
+
       <Modal {...modalState} />
     </div>
   );

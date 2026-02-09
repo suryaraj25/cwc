@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Admin = require('../models/Admin');
 const VoteTransaction = require('../models/VoteTransaction');
 const AuditLog = require('../models/AuditLog');
+const WhitelistedEmail = require('../models/WhitelistedEmail');
 const bcrypt = require('bcrypt');
 const UserRole = { GUEST: 'GUEST', STUDENT: 'STUDENT', ADMIN: 'ADMIN' }; // Simple enum
 
@@ -10,6 +11,12 @@ async function authRoutes(fastify, options) {
     // Register
     fastify.post('/register', async (request, reply) => {
         const userData = request.body;
+
+        // 0. Whitelist Check
+        const isWhitelisted = await WhitelistedEmail.findOne({ email: userData.email.toLowerCase() });
+        if (!isWhitelisted) {
+            return reply.code(403).send({ success: false, message: 'This email is not authorized for registration. Please contact the administrator.' });
+        }
 
         // 1. Check existing
         const existing = await User.findOne({
@@ -246,6 +253,14 @@ async function authRoutes(fastify, options) {
         // If I want to clear DB, I need to know WHO is logging out.
 
         return { success: true, message: 'Admin Logout Successful' };
+    });
+    // Check Email (Public)
+    fastify.get('/check-email', async (request, reply) => {
+        const { email } = request.query;
+        if (!email) return reply.code(400).send({ success: false, message: 'Email required' });
+
+        const isWhitelisted = await WhitelistedEmail.findOne({ email: email.toLowerCase() });
+        return { success: !!isWhitelisted, isWhitelisted: !!isWhitelisted };
     });
 }
 

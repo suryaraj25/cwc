@@ -21,7 +21,8 @@ interface AdminNavBarProps {
     | "settings"
     | "transactions"
     | "audit_logs"
-    | "admins";
+    | "admins"
+    | "leaderboard";
   setActiveTab: (
     tab:
       | "dashboard"
@@ -30,7 +31,8 @@ interface AdminNavBarProps {
       | "settings"
       | "transactions"
       | "audit_logs"
-      | "admins",
+      | "admins"
+      | "leaderboard",
   ) => void;
   config: VotingConfig;
   toggleVoting: () => void;
@@ -68,6 +70,7 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
     { id: "teams", icon: Trophy, label: "Teams" },
     { id: "users", icon: Users, label: "Students" },
     { id: "settings", icon: Clock, label: "Schedule" },
+    { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
   ];
 
   return (

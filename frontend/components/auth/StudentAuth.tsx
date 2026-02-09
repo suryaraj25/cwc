@@ -321,6 +321,21 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
                 onChange={handleChange}
                 placeholder="student@bitsathy.ac.in"
                 required
+                onBlur={async (e) => {
+                  const email = e.target.value;
+                  if (email && BITS_EMAIL_REGEX.test(email)) {
+                    if (isRegistering) {
+                      const res = await api.checkEmail(email);
+                      if (!res.isWhitelisted) {
+                        setError(
+                          "This email is not authorized for registration. Please contact the administrator.",
+                        );
+                      } else {
+                        setError(null);
+                      }
+                    }
+                  }
+                }}
               />
               <div className="grid grid-cols-2 gap-4">
                 <Input

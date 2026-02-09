@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
@@ -210,6 +210,57 @@ export const api = {
 
     getAuditLogs: async (page = 1, limit = 20, search = ''): Promise<{ logs: any[], total: number, currentPage: number, totalPages: number }> => {
         const res = await apiClient.get(`/admin/audit-logs?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        return res.data;
+    },
+
+    checkEmail: async (email: string): Promise<{ success: boolean; isWhitelisted: boolean }> => {
+        try {
+            const res = await apiClient.get(`/auth/check-email?email=${encodeURIComponent(email)}`);
+            return res.data;
+        } catch (error: any) {
+            return { success: false, isWhitelisted: false };
+        }
+    },
+
+    // Leaderboard
+    getLeaderboard: async (): Promise<any> => {
+        const res = await apiClient.get(`/leaderboard`);
+        return res.data;
+    },
+
+    getLeaderboardByDateRange: async (startDate: string, endDate: string): Promise<any> => {
+        const res = await apiClient.get(`/leaderboard/range?startDate=${startDate}&endDate=${endDate}`);
+        return res.data;
+    },
+
+    getDailyLeaderboard: async (date?: string): Promise<any> => {
+        const url = date ? `/leaderboard/daily?date=${date}` : `/leaderboard/daily`;
+        const res = await apiClient.get(url);
+        return res.data;
+    },
+
+    // Admin: Leaderboard Management
+    submitTeamScore: async (teamId: string, score: number, date?: string, notes?: string): Promise<any> => {
+        const res = await apiClient.post(`/leaderboard/scores`, { teamId, score, date, notes });
+        return res.data;
+    },
+
+    getAdminScores: async (teamId?: string, startDate?: string, endDate?: string, page = 1, limit = 20): Promise<any> => {
+        let url = `/leaderboard/scores?page=${page}&limit=${limit}`;
+        if (teamId) url += `&teamId=${teamId}`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+        const res = await apiClient.get(url);
+        return res.data;
+    },
+
+    deleteTeamScore: async (scoreId: string): Promise<any> => {
+        const res = await apiClient.delete(`/leaderboard/scores/${scoreId}`);
+        return res.data;
+    },
+
+    getScoresSummary: async (): Promise<any> => {
+        const res = await apiClient.get(`/leaderboard/scores-summary`);
         return res.data;
     }
 };

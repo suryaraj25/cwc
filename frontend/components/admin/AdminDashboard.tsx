@@ -52,8 +52,9 @@ import { Pagination } from "../ui/Pagination";
 import { AuditLogsTable } from "./AuditLogsTable";
 import { Modal, ModalProps } from "../ui/Modal";
 import { toast } from "../../stores/useToastStore";
-import { useDebounce } from "../../hooks/useDebounce";
-import { useAuthStore } from "../../stores/useAuthStore";
+import { AdminScoreManager } from "./AdminScoreManager";
+import { useAuthStore  } from "../../stores/useAuthStore.ts";
+import {useDebounce} from "../../hooks/useDebounce.ts"
 
 // Modern Color Palette for Charts
 const COLORS = [
@@ -78,6 +79,7 @@ export const AdminDashboard: React.FC = () => {
     | "transactions"
     | "audit_logs"
     | "admins"
+    | "leaderboard"
   >("dashboard");
   const [data, setData] = useState<{
     users: User[];
@@ -2204,6 +2206,14 @@ export const AdminDashboard: React.FC = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "leaderboard" && (
+        <div className="max-w-6xl mx-auto">
+          <div className="admin-glass rounded-2xl p-8">
+            <AdminScoreManager />
           </div>
         </div>
       )}

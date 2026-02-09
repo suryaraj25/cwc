@@ -64,6 +64,7 @@ fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
 fastify.register(require('./routes/teams'), { prefix: '/api/teams' });
 fastify.register(require('./routes/voting'), { prefix: '/api/voting' });
 fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
+fastify.register(require('./routes/leaderboard'), { prefix: '/api/leaderboard' });
 
 fastify.setNotFoundHandler((request, reply) => {
     if (request.raw.url.startsWith('/api')) {
