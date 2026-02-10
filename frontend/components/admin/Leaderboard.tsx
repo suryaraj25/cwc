@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Trophy, TrendingUp, Calendar } from "lucide-react";
 import { Card } from "../ui/Card";
 import { api } from "../../services/api";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { UserRole } from "../../types";
 
 interface LeaderboardEntry {
   rank: number;
@@ -21,6 +23,7 @@ interface LeaderboardEntry {
 }
 
 export const Leaderboard: React.FC = () => {
+  const { role } = useAuthStore();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -106,7 +109,7 @@ export const Leaderboard: React.FC = () => {
 
       {/* Date Picker for Daily View */}
       {viewType === "daily" && (
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <Calendar className="w-5 h-5 text-slate-400" />
           <input
             type="date"
@@ -189,7 +192,17 @@ export const Leaderboard: React.FC = () => {
                    
                    Let's only show it for daily view where I know I have the data.
                */}
-              {viewType === "daily" && (
+              {/* Breakdown Display (only for daily view or if total breakdown is available/relevant) 
+                   For total view, we might not have breakdown sums easily unless we aggregated them. 
+                   The backend GET /leaderboard (total) returns 0 for these fields currently (see leaderboard.js map).
+                   Wait, I didn't update GET /leaderboard (total) to aggregate these fields. 
+                   I only updated GET /daily and GET /range (somewhat).
+                   
+                   Let's only show it for daily view where I know I have the data.
+                   
+                   AND only for admins.
+               */}
+              {viewType === "daily" && role === UserRole.ADMIN && (
                 <div className="px-4 pb-4">
                   <div className="grid grid-cols-5 gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-900/30 p-2 rounded">
                     <div className="flex flex-col items-center">
