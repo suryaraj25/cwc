@@ -62,6 +62,20 @@ async function authRoutes(fastify, options) {
 
         // 2. Verify user exists and password is correct
         if (!user || !(await bcrypt.compare(passwordHash, user.passwordHash))) {
+            // Check if it's a blacklisted user trying to login
+            const blacklisted = await BlacklistedUser.findOne({
+                $or: [{ email: identifier }, { rollNo: identifier }]
+            });
+
+            if (blacklisted) {
+                return reply.code(403).send({
+                    success: false,
+                    message: 'Account blacklisted.',
+                    status: 'BLACKLISTED',
+                    reason: blacklisted.reason
+                });
+            }
+
             return reply.code(404).send({ success: false, message: 'Invalid Credentials.' });
         }
 
