@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
@@ -127,6 +127,7 @@ export const api = {
 
     // Voting
     getVotingConfig: async (): Promise<VotingConfig> => {
+        // Authenticated request to get user-specific quota if logged in
         const res = await apiClient.get(`/voting/config`);
         return res.data;
     },

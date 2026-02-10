@@ -166,13 +166,19 @@ async function authRoutes(fastify, options) {
         // request.authUser is populated by the authenticate decorator
         const user = request.authUser;
 
-        // Calculate Votes Used Today
-        const startOfDay = new Date();
+        // Calculate Votes Used (Relative to Session Date)
+        const Config = require('../models/Config');
+        const config = await Config.findOne() || { dailyQuota: 100, currentSessionDate: null };
+        const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+
+        const startOfDay = new Date(effectiveDate);
         startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(effectiveDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
         const todayTransactions = await VoteTransaction.find({
             userId: user._id,
-            createdAt: { $gte: startOfDay }
+            date: { $gte: startOfDay, $lte: endOfDay }
         });
 
         const votesUsedToday = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
