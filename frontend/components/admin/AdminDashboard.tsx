@@ -106,14 +106,14 @@ export const AdminDashboard: React.FC = () => {
 
   // Search States
   const [usersSearchInput, setUsersSearchInput] = useState("");
-  const [selectedYear, setSelectedYear] = useState(""); // Year Filter State
+  const [selectedYear, seteamVotes: Record\u003Cstring, number>;tSelectedYear] = useState(""); // Year Filter State
   const [transactionsSearchInput, setTransactionsSearchInput] = useState("");
 
   // Debounced search values (3 seconds)
-  const debouncedUsersSearch = useDebounce(usersSearchInput, 3000);
+  const debouncedUsersSearch = useDebounce(usersSearchInput, 1000);
   const debouncedTransactionsSearch = useDebounce(
     transactionsSearchInput,
-    3000,
+    1000,
   );
 
   // UI States
