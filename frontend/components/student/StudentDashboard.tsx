@@ -24,9 +24,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [config, setConfig] = useState<VotingConfig>({
     isVotingOpen: false,
+    isSessionLive: false,
     startTime: null,
     endTime: null,
     dailyQuota: 100,
+    slots: [],
   });
 
   // Local state for CURRENT session votes (always start at 0)
@@ -45,16 +47,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
 
   // View type: voting or leaderboard
   const [viewType, setViewType] = useState<"voting" | "leaderboard">(
-    config.isVotingOpen ? "voting" : "leaderboard",
+    config.isSessionLive ? "voting" : "leaderboard",
   );
 
   useEffect(() => {
-    if (!config.isVotingOpen) {
+    if (!config.isSessionLive) {
       setViewType("leaderboard");
     } else {
       setViewType("voting");
     }
-  }, [config.isVotingOpen]);
+  }, [config.isSessionLive]);
 
   // Modal State
   const [modalState, setModalState] = useState<ModalProps>({
@@ -142,7 +144,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
   const remaining = (config.dailyQuota || 0) - totalUsed;
 
   const handleVoteChange = (teamId: string, delta: number) => {
-    if (!config.isVotingOpen) return;
+    if (!config.isSessionLive) return;
 
     const current = votes[teamId] || 0;
     const next = current + delta;
@@ -255,7 +257,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-xs text-slate-400 uppercase">
-                    Daily Quota
+                    {config.activeSlotLabel ? "Slot Quota" : "Daily Quota"}
                   </p>
                   <p className="text-2xl font-bold text-white">
                     {config.dailyQuota}
@@ -286,17 +288,50 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
                   <span className="text-sm font-medium">{message.text}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-slate-500">
+                <div className="flex items-start gap-2 text-slate-500">
                   <Clock size={20} />
-                  <span className="text-sm">
-                    {config.isVotingOpen ? "Session Active" : "Session Paused"}
+                  <span className="text-sm flex flex-col items-start leading-tight">
+                    <span>
+                      {config.isSessionLive
+                        ? "Session Active"
+                        : "Session Paused"}
+                    </span>
+                    {config.isSessionLive
+                      ? config.activeSlotLabel && (
+                          <span className="text-xs text-indigo-400 font-bold uppercase tracking-wider mt-0.5">
+                            {config.activeSlotLabel}
+                          </span>
+                        )
+                      : config.nextSlot && (
+                          <div className="flex flex-col mt-1">
+                            <span className="text-xs text-slate-500 uppercase font-bold tracking-tight">
+                              Next Session
+                            </span>
+                            <span className="text-xs text-indigo-400 font-bold uppercase">
+                              {config.nextSlot.label} -{" "}
+                              {new Date(
+                                config.nextSlot.startTime,
+                              ).toLocaleDateString([], {
+                                month: "short",
+                                day: "numeric",
+                              })}{" "}
+                              @{" "}
+                              {new Date(
+                                config.nextSlot.startTime,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        )}
                   </span>
                 </div>
               )}
             </Card>
           </div>
 
-          {!config.isVotingOpen ? (
+          {!config.isSessionLive ? (
             <div className="py-12">
               <VotingClosedState config={config} />
             </div>

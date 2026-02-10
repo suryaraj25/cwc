@@ -16,19 +16,37 @@ async function votingRoutes(fastify, options) {
                 const user = await fastify.mongo.AuthUser.findById(decoded.id);
                 if (user) {
                     const config = await Config.findOne() || new Config();
-                    const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
-                    const startOfDay = new Date(effectiveDate);
-                    startOfDay.setHours(0, 0, 0, 0);
-                    const endOfDay = new Date(effectiveDate);
-                    endOfDay.setHours(23, 59, 59, 999);
 
-                    const todayTransactions = await VoteTransaction.find({
-                        userId: user._id,
-                        date: { $gte: startOfDay, $lte: endOfDay }
+                    // Determine Active Slot for Quota calculation
+                    const now = new Date();
+                    const activeSlot = config.slots?.find(slot => {
+                        const start = new Date(slot.startTime);
+                        const end = new Date(slot.endTime);
+                        return now >= start && now <= end;
                     });
-                    const votesUsed = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
+
+                    let startBoundary, endBoundary;
+                    if (activeSlot) {
+                        // Per-slot quota!
+                        startBoundary = new Date(activeSlot.startTime);
+                        endBoundary = new Date(activeSlot.endTime);
+                    } else {
+                        // Daily fallback
+                        const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+                        startBoundary = new Date(effectiveDate);
+                        startBoundary.setUTCHours(0, 0, 0, 0);
+                        endBoundary = new Date(effectiveDate);
+                        endBoundary.setUTCHours(23, 59, 59, 999);
+                    }
+
+                    const slotTransactions = await VoteTransaction.find({
+                        userId: user._id,
+                        createdAt: { $gte: startBoundary, $lte: endBoundary }
+                    });
+                    const votesUsed = slotTransactions.reduce((sum, t) => sum + t.votes, 0);
+
                     userSpecificData = {
-                        votesUsedToday: votesUsed,
+                        votesUsedToday: votesUsed, // Keeping the field name to avoid frontend breaking
                         remainingToday: (config.dailyQuota || 100) - votesUsed
                     };
                 }
@@ -38,12 +56,46 @@ async function votingRoutes(fastify, options) {
         }
 
         const config = await Config.findOne() || new Config();
+
+        // Determine Active Slot or Next Slot
+        const now = new Date();
+        let activeSlotLabel = "";
+        let nextSlot = null;
+
+        if (config.slots && config.slots.length > 0) {
+            // Find active slot
+            const activeSlot = config.slots.find(slot => {
+                const start = new Date(slot.startTime);
+                const end = new Date(slot.endTime);
+                return now >= start && now <= end;
+            });
+
+            if (activeSlot) {
+                activeSlotLabel = activeSlot.label || "";
+            } else {
+                // No active slot, find next one
+                const futureSlots = config.slots
+                    .filter(slot => new Date(slot.startTime) > now)
+                    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+                if (futureSlots.length > 0) {
+                    nextSlot = futureSlots[0];
+                }
+            }
+        }
+
+        const isSessionLive = config.isVotingOpen && (config.slots.length === 0 || !!activeSlotLabel);
+
         return {
             isVotingOpen: config.isVotingOpen,
+            isSessionLive,
             startTime: config.startTime,
             endTime: config.endTime,
             dailyQuota: config.dailyQuota || 100,
             currentSessionDate: config.currentSessionDate,
+            slots: config.slots || [],
+            activeSlotLabel,
+            nextSlot,
             ...userSpecificData
         };
     });
@@ -61,12 +113,29 @@ async function votingRoutes(fastify, options) {
             return reply.code(403).send({ success: false, message: 'Voting is currently closed by Admin.' });
         }
 
-        // 2. Determine Effective Date
-        const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+        // 2. Determine Active Slot and Effective Date
+        const now = new Date();
+        let activeSlot = null;
+        if (config.slots && config.slots.length > 0) {
+            activeSlot = config.slots.find(slot => {
+                const start = new Date(slot.startTime);
+                const end = new Date(slot.endTime);
+                return now >= start && now <= end;
+            });
+        }
 
-        // 3. Time Window Check (Skip if currentSessionDate is set - implied override)
-        if (!config.currentSessionDate && config.startTime && config.endTime) {
-            const now = new Date();
+        let effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+
+        // If slot is active, it overrides currentSessionDate and time window checks
+        if (activeSlot) {
+            effectiveDate = new Date(activeSlot.date);
+        } else if (config.slots && config.slots.length > 0) {
+            // If slots exist but none are active, voting is closed
+            return reply.code(403).send({ success: false, message: 'Voting is not active for any scheduled slot at this time.' });
+        }
+
+        // 3. Time Window Check (Legacy fallback if no slots defined)
+        if (!activeSlot && !config.currentSessionDate && config.startTime && config.endTime) {
             if (now < config.startTime || now > config.endTime) {
                 return reply.code(403).send({ success: false, message: 'Voting is only allowed between the scheduled times.' });
             }
@@ -79,18 +148,25 @@ async function votingRoutes(fastify, options) {
             }
         }
 
-        // 4. Calculate Votes Used Today (Relative to effectiveDate)
-        const startOfDay = new Date(effectiveDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(effectiveDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        // 4. Calculate Votes Used in current context (Slot or Day)
+        let startBoundary, endBoundary;
+        if (activeSlot) {
+            startBoundary = new Date(activeSlot.startTime);
+            endBoundary = new Date(activeSlot.endTime);
+        } else {
+            const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+            startBoundary = new Date(effectiveDate);
+            startBoundary.setUTCHours(0, 0, 0, 0);
+            endBoundary = new Date(effectiveDate);
+            endBoundary.setUTCHours(23, 59, 59, 999);
+        }
 
-        const todayTransactions = await VoteTransaction.find({
+        const slotTransactions = await VoteTransaction.find({
             userId: user._id,
-            date: { $gte: startOfDay, $lte: endOfDay }
+            createdAt: { $gte: startBoundary, $lte: endBoundary }
         });
 
-        const votesUsedToday = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
+        const votesUsedToday = slotTransactions.reduce((sum, t) => sum + t.votes, 0);
         const totalNewVotes = Object.values(votes).reduce((a, b) => a + b, 0);
 
         if (totalNewVotes === 0) {

@@ -17,6 +17,14 @@ export interface User {
   teamId?: string | null;
 }
 
+export interface Slot {
+  _id?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  label?: string;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -26,10 +34,14 @@ export interface Team {
 
 export interface VotingConfig {
   isVotingOpen: boolean;
+  isSessionLive: boolean;
   startTime: string | null;
   endTime: string | null;
   dailyQuota: number;
   currentSessionDate?: string | null;
+  slots: Slot[];
+  activeSlotLabel?: string;
+  nextSlot?: Slot;
   votesUsedToday?: number;
   remainingToday?: number;
 }

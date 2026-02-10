@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { io } from "socket.io-client";
-import { User, Team, VotingConfig, DeviceRegistry } from "../../types";
+import { User, Team, VotingConfig, DeviceRegistry, Slot } from "../../types";
 import { api } from "../../services/api";
 import { DEPARTMENT_CODES } from "../../constants";
 import { Button } from "../ui/Button";
@@ -141,7 +141,8 @@ export const AdminDashboard: React.FC = () => {
     startTime: string;
     endTime: string;
     currentSessionDate: string;
-  }>({ startTime: "", endTime: "", currentSessionDate: "" });
+    slots: Slot[];
+  }>({ startTime: "", endTime: "", currentSessionDate: "", slots: [] });
 
   // Admin Management State
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
@@ -324,6 +325,7 @@ export const AdminDashboard: React.FC = () => {
           currentSessionDate: d.config.currentSessionDate
             ? new Date(d.config.currentSessionDate).toISOString().split("T")[0]
             : "",
+          slots: d.config.slots || [],
         });
       }
     } catch (e) {
@@ -439,67 +441,16 @@ export const AdminDashboard: React.FC = () => {
   // --- ACTIONS ---
 
   const toggleVoting = async () => {
-    // Check if within time window
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
-    );
-    const start = data.config.startTime
-      ? new Date(
-          new Date(data.config.startTime).toLocaleString("en-US", {
-            timeZone: "Asia/Kolkata",
-          }),
-        )
-      : null;
-    const end = data.config.endTime
-      ? new Date(
-          new Date(data.config.endTime).toLocaleString("en-US", {
-            timeZone: "Asia/Kolkata",
-          }),
-        )
-      : null;
-
-    if (!data.config.isVotingOpen) {
-      // Trying to open
-      if (start && end) {
-        if (now < start || now > end) {
-          showModal(
-            "Force Start Voting Session?",
-            "The current time is outside the scheduled Start/End window. Starting now will CLEAR the schedule and enable voting immediately. Are you sure?",
-            "warning",
-            async () => {
-              try {
-                // Clear schedule and open
-                await api.updateConfig({
-                  isVotingOpen: true,
-                  startTime: null,
-                  endTime: null,
-                });
-                toast.success(
-                  "Voting session forcefully started (Schedule Cleared)!",
-                );
-                refreshData();
-              } catch (error) {
-                console.error(error);
-                toast.error("Failed to force start session.");
-              }
-            },
-            { confirmLabel: "Force Start", confirmVariant: "destructive" },
-          );
-          return;
-        }
-      }
-    }
-
-    // If we are CLOSING the session, ask for confirmation to avoid accidental stops during live event
+    // If we are CLOSING the session
     if (data.config.isVotingOpen) {
       showModal(
         "Pause Voting Session?",
-        "Are you sure you want to pause voting? Students will not be able to cast votes until you resume.",
+        "Are you sure you want to pause voting? This is a Master Kill-Switch. No votes will be allowed even if a slot is active.",
         "warning",
         async () => {
           try {
             await api.updateConfig({ isVotingOpen: false });
-            toast.info("Voting session paused.");
+            toast.info("Voting system disarmed.");
             refreshData();
           } catch (error) {
             console.error(error);
@@ -511,15 +462,15 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
 
-    // If OPENING, ask for confirmation too
+    // If OPENING
     showModal(
       "Start Voting Session?",
-      "Are you sure you want to go LIVE? Students will be able to cast votes immediately.",
+      "Are you sure you want to Enable Voting? Note: Voting will only be LIVE if a scheduled slot is currently active.",
       "confirm",
       async () => {
         try {
           await api.updateConfig({ isVotingOpen: true });
-          toast.success("Voting session is LIVE!");
+          toast.success("Voting system ARMED!");
           refreshData();
         } catch (error) {
           console.error(error);
@@ -540,6 +491,7 @@ export const AdminDashboard: React.FC = () => {
         ? new Date(`${configForm.endTime}+05:30`).toISOString()
         : null,
       currentSessionDate: configForm.currentSessionDate || null,
+      slots: configForm.slots,
     });
     toast.success("Voting Window Updated Successfully");
     refreshData();
@@ -1238,6 +1190,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
       {activeTab === "teams" && (
         <div className="space-y-6">
           <div className="flex max-sm:flex-col max-sm:gap-y-4 justify-between items-center bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg">
@@ -2184,15 +2137,206 @@ export const AdminDashboard: React.FC = () => {
                 <AlertTriangle className="text-indigo-400 w-6 h-6 shrink-0" />
                 <div className="text-sm text-indigo-300">
                   <strong>Note:</strong> The "Start Session" button on the
-                  dashboard will only work if the current time falls within this
-                  configured window. If no window is set, manual toggling works
-                  freely.
+                  dashboard ARMS the system. Voting will only be LIVE if a
+                  scheduled slot is currently active. If no slots are defined,
+                  manual toggling works freely.
                 </div>
               </div>
 
-              <div className="flex justify-end max-sm:justify-center pt-4">
-                <Button type="submit" className="px-8 py-3 text-lg">
-                  Save Schedule
+              {/* Multiple Scheduled Slots */}
+              <div className="pt-8 border-t border-slate-700">
+                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                  <Calendar className="text-indigo-400" />
+                  Multiple Scheduled Slots
+                </h4>
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 space-y-6">
+                  {/* Slots List */}
+                  <div className="space-y-3">
+                    {configForm.slots.length > 0 ? (
+                      configForm.slots.map((slot, index) => (
+                        <div
+                          key={slot._id || index}
+                          className="flex items-center justify-between bg-slate-800 border border-slate-700 p-4 rounded-xl group hover:border-indigo-500/50 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-white font-bold text-sm">
+                                {slot.label || `Slot ${index + 1}`}
+                              </span>
+                              <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-indigo-500/20">
+                                {new Date(slot.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                              <Clock size={12} className="text-slate-500" />
+                              <span>
+                                {new Date(slot.startTime).toLocaleTimeString(
+                                  [],
+                                  { hour: "2-digit", minute: "2-digit" },
+                                )}
+                              </span>
+                              <span>→</span>
+                              <span>
+                                {new Date(slot.endTime).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newSlots = [...configForm.slots];
+                              newSlots.splice(index, 1);
+                              setConfigForm({ ...configForm, slots: newSlots });
+                            }}
+                            className="p-2 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6 border-2 border-dashed border-slate-800 rounded-xl">
+                        <Calendar className="mx-auto h-8 w-8 text-slate-700 mb-2" />
+                        <p className="text-sm text-slate-500">
+                          No slots defined yet.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add Slot Form */}
+                  <div className="pt-4 border-t border-slate-800">
+                    <h5 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+                      Add New Slot
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-end">
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">
+                          Logical Date
+                        </label>
+                        <input
+                          type="date"
+                          id="new-slot-date"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">
+                          Start Time (IST)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="new-slot-start"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">
+                          End Time (IST)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="new-slot-end"
+                          className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">
+                          Label
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            id="new-slot-label"
+                            placeholder="e.g. Day 1"
+                            className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                          />
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="px-3 bg-indigo-600 hover:bg-indigo-700 text-white border-none shrink-0"
+                            onClick={() => {
+                              const date = (
+                                document.getElementById(
+                                  "new-slot-date",
+                                ) as HTMLInputElement
+                              ).value;
+                              const start = (
+                                document.getElementById(
+                                  "new-slot-start",
+                                ) as HTMLInputElement
+                              ).value;
+                              const end = (
+                                document.getElementById(
+                                  "new-slot-end",
+                                ) as HTMLInputElement
+                              ).value;
+                              const label = (
+                                document.getElementById(
+                                  "new-slot-label",
+                                ) as HTMLInputElement
+                              ).value;
+
+                              if (!date || !start || !end) {
+                                toast.error("Please fill required slot fields");
+                                return;
+                              }
+
+                              const newSlot: Slot = {
+                                date: new Date(date).toISOString(),
+                                startTime: new Date(
+                                  `${start}+05:30`,
+                                ).toISOString(),
+                                endTime: new Date(`${end}+05:30`).toISOString(),
+                                label: label,
+                              };
+
+                              setConfigForm({
+                                ...configForm,
+                                slots: [...configForm.slots, newSlot],
+                              });
+
+                              // Reset local inputs
+                              (
+                                document.getElementById(
+                                  "new-slot-date",
+                                ) as HTMLInputElement
+                              ).value = "";
+                              (
+                                document.getElementById(
+                                  "new-slot-start",
+                                ) as HTMLInputElement
+                              ).value = "";
+                              (
+                                document.getElementById(
+                                  "new-slot-end",
+                                ) as HTMLInputElement
+                              ).value = "";
+                              (
+                                document.getElementById(
+                                  "new-slot-label",
+                                ) as HTMLInputElement
+                              ).value = "";
+                            }}
+                          >
+                            <Plus size={18} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-8">
+                <Button
+                  type="submit"
+                  className="px-8 py-3 text-base font-bold shadow-lg shadow-indigo-500/10"
+                >
+                  Save All Changes
                 </Button>
               </div>
             </form>

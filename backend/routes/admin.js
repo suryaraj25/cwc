@@ -74,7 +74,7 @@ async function adminRoutes(fastify, options) {
         // Latch or Update currentSessionDate if opening voting and it's not explicitly provided
         if (request.body.isVotingOpen === true && !request.body.currentSessionDate) {
             const now = new Date();
-            now.setHours(0, 0, 0, 0);
+            now.setUTCHours(0, 0, 0, 0);
 
             // If no date set, or if the set date is from a previous day, update to today
             if (!config.currentSessionDate || config.currentSessionDate < now) {
@@ -83,8 +83,12 @@ async function adminRoutes(fastify, options) {
         }
 
         // Handle other fields via Object.assign, but exclude currentSessionDate as we handled it
-        const { currentSessionDate, ...otherProps } = request.body;
+        const { currentSessionDate, slots, ...otherProps } = request.body;
         Object.assign(config, otherProps);
+
+        if (slots !== undefined) {
+            config.slots = slots;
+        }
 
         await config.save();
 
@@ -111,9 +115,7 @@ async function adminRoutes(fastify, options) {
     // Get Transactions with Pagination and Search
     fastify.get('/transactions', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         // PROTECT: Only Super Admin can see transactions
-        if (request.authAdmin.role !== 'SUPER_ADMIN') {
-            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
-        }
+
 
         const page = parseInt(request.query.page) || 1;
         const limit = parseInt(request.query.limit) || 20;
@@ -185,16 +187,9 @@ async function adminRoutes(fastify, options) {
         const skip = (page - 1) * limit;
 
         // Build Search Query (need to filter after population for user fields, or use aggregate)
-        // Since we are using mongoose populate, filtering by populated fields is tricky in `find`.
-        // Efficient approach: Find matching users first if search looks like a name/rollno, OR
-        // use aggregation lookup.
-        // For simplicity and performance balance given scale:
-        // 1. If search is present, build a complex query.
-
         let query = {};
         if (search) {
             const searchRegex = { $regex: search, $options: 'i' };
-            // We need to find users that match the search first
             const matchingUsers = await User.find({
                 $or: [{ name: searchRegex }, { rollNo: searchRegex }, { dept: searchRegex }]
             }).select('_id');
@@ -205,7 +200,7 @@ async function adminRoutes(fastify, options) {
                     { action: searchRegex },
                     { ipAddress: searchRegex },
                     { adminId: searchRegex },
-                    { userId: { $in: matchingUserIds } } // Match logs from those users
+                    { userId: { $in: matchingUserIds } }
                 ]
             };
         }

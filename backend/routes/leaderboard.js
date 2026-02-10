@@ -1,6 +1,7 @@
 const Team = require('../models/Team');
 const TeamScore = require('../models/TeamScore');
 const AuditLog = require('../models/AuditLog');
+const VoteTransaction = require('../models/VoteTransaction');
 
 async function leaderboardRoutes(fastify, options) {
 
@@ -20,12 +21,19 @@ async function leaderboardRoutes(fastify, options) {
                     { $group: { _id: null, total: { $sum: '$score' } } }
                 ]);
 
+                const studentVotes = await VoteTransaction.aggregate([
+                    { $match: { teamId: team._id } },
+                    { $group: { _id: null, total: { $sum: '$votes' } } }
+                ]);
+
+                const totalStudentVotes = studentVotes[0]?.total || 0;
+
                 return {
                     id: team.id,
                     name: team.name,
                     description: team.description,
                     imageUrl: team.imageUrl,
-                    totalScore: totalScore[0]?.total || 0,
+                    totalScore: (totalScore[0]?.total || 0) + totalStudentVotes,
                     lastScore: latestScore?.score || 0,
                     lastUpdated: latestScore?.date || null
                 };
@@ -56,7 +64,7 @@ async function leaderboardRoutes(fastify, options) {
         if (startDate) dateQuery.$gte = new Date(startDate);
         if (endDate) {
             const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
+            end.setUTCHours(23, 59, 59, 999);
             dateQuery.$lte = end;
         }
 
@@ -74,12 +82,24 @@ async function leaderboardRoutes(fastify, options) {
                     { $group: { _id: null, total: { $sum: '$score' } } }
                 ]);
 
+                const studentVotes = await VoteTransaction.aggregate([
+                    {
+                        $match: {
+                            teamId: team._id,
+                            ...(Object.keys(dateQuery).length > 0 && { date: dateQuery })
+                        }
+                    },
+                    { $group: { _id: null, total: { $sum: '$votes' } } }
+                ]);
+
+                const totalStudentVotes = studentVotes[0]?.total || 0;
+
                 return {
                     id: team.id,
                     name: team.name,
                     description: team.description,
                     imageUrl: team.imageUrl,
-                    totalScore: totalScore[0]?.total || 0
+                    totalScore: (totalScore[0]?.total || 0) + totalStudentVotes
                 };
             })
         );
@@ -103,10 +123,13 @@ async function leaderboardRoutes(fastify, options) {
         const targetDate = date ? new Date(date) : new Date();
 
         const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
+        startOfDay.setUTCHours(0, 0, 0, 0);
 
         const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        console.log("startOfDay", startOfDay)
+        console.log("endOfDay", endOfDay)
 
         const teams = await Team.find();
 
@@ -117,17 +140,31 @@ async function leaderboardRoutes(fastify, options) {
                     date: { $gte: startOfDay, $lte: endOfDay }
                 }).lean();
 
+                // Aggregate student votes for this specific day
+                const studentVotes = await VoteTransaction.aggregate([
+                    {
+                        $match: {
+                            teamId: team._id,
+                            date: { $gte: startOfDay, $lte: endOfDay }
+                        }
+                    },
+                    { $group: { _id: null, total: { $sum: '$votes' } } }
+                ]);
+
+                const totalStudentVotes = studentVotes[0]?.total || 0;
+
                 return {
                     id: team.id,
                     name: team.name,
                     description: team.description,
                     imageUrl: team.imageUrl,
-                    score: score?.score || 0,
+                    score: (score?.score || 0) + totalStudentVotes,
                     advantage: score?.advantage || 0,
                     main: score?.main || 0,
                     special: score?.special || 0,
                     elimination: score?.elimination || 0,
                     immunity: score?.immunity || 0,
+                    studentVotes: totalStudentVotes, // Expose student votes separately
                     scoreId: score?._id ? score._id.toString() : null,
                     enteredBy: score?.enteredBy || null,
                     notes: score?.notes || ''
@@ -169,7 +206,7 @@ async function leaderboardRoutes(fastify, options) {
         }
 
         const scoreDate = date ? new Date(date) : new Date();
-        scoreDate.setHours(0, 0, 0, 0);
+        scoreDate.setUTCHours(0, 0, 0, 0);
 
         // Check if score already exists for this team on this date
         const existing = await TeamScore.findOne({
@@ -245,7 +282,7 @@ async function leaderboardRoutes(fastify, options) {
             if (startDate) query.date.$gte = new Date(startDate);
             if (endDate) {
                 const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
+                end.setUTCHours(23, 59, 59, 999);
                 query.date.$lte = end;
             }
         }
@@ -311,13 +348,23 @@ async function leaderboardRoutes(fastify, options) {
         const summary = await Promise.all(
             teams.map(async (team) => {
                 const scores = await TeamScore.find({ teamId: team._id });
-                const totalScore = scores.reduce((sum, s) => sum + s.score, 0);
+                const teamScoreTotal = scores.reduce((sum, s) => sum + s.score, 0);
+
+                // Aggregate student votes
+                const studentVotes = await VoteTransaction.aggregate([
+                    { $match: { teamId: team._id } },
+                    { $group: { _id: null, total: { $sum: '$votes' } } }
+                ]);
+                const totalStudentVotes = studentVotes[0]?.total || 0;
+
                 const latestScore = scores.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
                 return {
                     teamId: team.id,
                     teamName: team.name,
-                    totalScore,
+                    totalScore: teamScoreTotal + totalStudentVotes,
+                    adminScore: teamScoreTotal,
+                    studentVotes: totalStudentVotes,
                     scoreCount: scores.length,
                     lastUpdated: latestScore?.date || null,
                     lastScore: latestScore?.score || 0

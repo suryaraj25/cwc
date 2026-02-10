@@ -79,15 +79,15 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
     { id: "settings", icon: Clock, label: "Schedule" },
     { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
     {
-            id: "access_control",
-            icon: Shield,
-            label: "Access Control",
-          },
-          {
-            id: "transactions",
-            icon: FileSpreadsheet,
-            label: "Transactions",
-          },
+      id: "access_control",
+      icon: Shield,
+      label: "Access Control",
+    },
+    {
+      id: "transactions",
+      icon: FileSpreadsheet,
+      label: "Transactions",
+    },
   ];
 
   return (
@@ -111,22 +111,36 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
       <div className="flex flex-col sm:flex-row items-center gap-x-2 gap-y-4 sm:gap-4 px-2 sm:px-3 w-full md:w-auto">
         <div
           className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border w-full sm:w-auto justify-center ${
-            config.isVotingOpen
-              ? "bg-green-500/10 border-green-500/20"
-              : "bg-red-500/10 border-red-500/20"
+            !config.isVotingOpen
+              ? "bg-red-500/10 border-red-500/20"
+              : config.isSessionLive
+                ? "bg-green-500/10 border-green-500/20"
+                : "bg-yellow-500/10 border-yellow-500/20"
           }`}
         >
           <div
             className={`w-2 h-2 rounded-full ${
-              config.isVotingOpen ? "bg-green-500 animate-pulse" : "bg-red-500"
+              !config.isVotingOpen
+                ? "bg-red-500"
+                : config.isSessionLive
+                  ? "bg-green-500 animate-pulse"
+                  : "bg-yellow-500"
             }`}
           />
           <span
             className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap ${
-              config.isVotingOpen ? "text-green-400" : "text-red-400"
+              !config.isVotingOpen
+                ? "text-red-400"
+                : config.isSessionLive
+                  ? "text-green-400"
+                  : "text-yellow-400"
             }`}
           >
-            {config.isVotingOpen ? "Online" : "Locked"}
+            {!config.isVotingOpen
+              ? "Locked"
+              : config.isSessionLive
+                ? "Live"
+                : "Armed"}
           </span>
         </div>
         <Button
