@@ -7,7 +7,7 @@ async function leaderboardRoutes(fastify, options) {
     // Get Leaderboard (Public - all roles can view)
     fastify.get('/', async (request, reply) => {
         const teams = await Team.find();
-        
+
         // Get latest score for each team
         const leaderboardData = await Promise.all(
             teams.map(async (team) => {
@@ -51,7 +51,7 @@ async function leaderboardRoutes(fastify, options) {
     // Get Leaderboard for a Specific Date Range (Public)
     fastify.get('/range', async (request, reply) => {
         const { startDate, endDate } = request.query;
-        
+
         let dateQuery = {};
         if (startDate) dateQuery.$gte = new Date(startDate);
         if (endDate) {
@@ -61,15 +61,15 @@ async function leaderboardRoutes(fastify, options) {
         }
 
         const teams = await Team.find();
-        
+
         const leaderboardData = await Promise.all(
             teams.map(async (team) => {
                 const totalScore = await TeamScore.aggregate([
-                    { 
-                        $match: { 
+                    {
+                        $match: {
                             teamId: team._id,
                             ...(Object.keys(dateQuery).length > 0 && { date: dateQuery })
-                        } 
+                        }
                     },
                     { $group: { _id: null, total: { $sum: '$score' } } }
                 ]);
@@ -101,18 +101,18 @@ async function leaderboardRoutes(fastify, options) {
     fastify.get('/daily', async (request, reply) => {
         const { date } = request.query;
         const targetDate = date ? new Date(date) : new Date();
-        
+
         const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
-        
+
         const endOfDay = new Date(targetDate);
         endOfDay.setHours(23, 59, 59, 999);
 
         const teams = await Team.find();
-        
+
         const leaderboardData = await Promise.all(
             teams.map(async (team) => {
-                const score = await TeamScore.findOne({ 
+                const score = await TeamScore.findOne({
                     teamId: team._id,
                     date: { $gte: startOfDay, $lte: endOfDay }
                 }).lean();
@@ -123,6 +123,11 @@ async function leaderboardRoutes(fastify, options) {
                     description: team.description,
                     imageUrl: team.imageUrl,
                     score: score?.score || 0,
+                    advantage: score?.advantage || 0,
+                    main: score?.main || 0,
+                    special: score?.special || 0,
+                    elimination: score?.elimination || 0,
+                    immunity: score?.immunity || 0,
                     scoreId: score?._id ? score._id.toString() : null,
                     enteredBy: score?.enteredBy || null,
                     notes: score?.notes || ''
@@ -145,11 +150,18 @@ async function leaderboardRoutes(fastify, options) {
 
     // Admin: Enter/Update Team Score (Admin Only)
     fastify.post('/scores', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
-        const { teamId, score, date, notes } = request.body;
+        const { teamId, advantage, main, special, elimination, immunity, date, notes } = request.body;
 
-        if (!teamId || score === undefined) {
-            return reply.code(400).send({ success: false, message: 'teamId and score are required' });
+        if (!teamId) {
+            return reply.code(400).send({ success: false, message: 'teamId is required' });
         }
+
+        const adv = advantage || 0;
+        const mn = main || 0;
+        const sp = special || 0;
+        const el = elimination || 0;
+        const im = immunity || 0;
+        const totalScore = adv + mn + sp + el + im;
 
         const team = await Team.findById(teamId);
         if (!team) {
@@ -171,7 +183,12 @@ async function leaderboardRoutes(fastify, options) {
         let teamScore;
         if (existing) {
             // Update existing
-            existing.score = score;
+            existing.score = totalScore;
+            existing.advantage = adv;
+            existing.main = mn;
+            existing.special = sp;
+            existing.elimination = el;
+            existing.immunity = im;
             existing.notes = notes || '';
             existing.enteredBy = request.authAdmin.username;
             await existing.save();
@@ -180,7 +197,12 @@ async function leaderboardRoutes(fastify, options) {
             // Create new
             teamScore = await TeamScore.create({
                 teamId,
-                score,
+                score: totalScore,
+                advantage: adv,
+                main: mn,
+                special: sp,
+                elimination: el,
+                immunity: im,
                 date: scoreDate,
                 enteredBy: request.authAdmin.username,
                 notes: notes || ''
@@ -214,10 +236,10 @@ async function leaderboardRoutes(fastify, options) {
     // Admin: Get All Scores with Filters
     fastify.get('/scores', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
         const { teamId, startDate, endDate, page = 1, limit = 20 } = request.query;
-        
+
         let query = {};
         if (teamId) query.teamId = teamId;
-        
+
         if (startDate || endDate) {
             query.date = {};
             if (startDate) query.date.$gte = new Date(startDate);

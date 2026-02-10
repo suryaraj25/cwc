@@ -11,6 +11,11 @@ const teamScoreSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
+    advantage: { type: Number, default: 0 },
+    main: { type: Number, default: 0 },
+    special: { type: Number, default: 0 },
+    elimination: { type: Number, default: 0 },
+    immunity: { type: Number, default: 0 },
     date: {
         type: Date,
         required: true

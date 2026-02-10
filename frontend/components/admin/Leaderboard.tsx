@@ -12,6 +12,11 @@ interface LeaderboardEntry {
   totalScore?: number;
   lastScore?: number;
   score?: number;
+  advantage?: number;
+  main?: number;
+  special?: number;
+  elimination?: number;
+  immunity?: number;
   lastUpdated: string | null;
 }
 
@@ -176,6 +181,42 @@ export const Leaderboard: React.FC = () => {
                   )}
                 </div>
               </div>
+              {/* Breakdown Display (only for daily view or if total breakdown is available/relevant) 
+                   For total view, we might not have breakdown sums easily unless we aggregated them. 
+                   The backend GET /leaderboard (total) returns 0 for these fields currently (see leaderboard.js map).
+                   Wait, I didn't update GET /leaderboard (total) to aggregate these fields. 
+                   I only updated GET /daily and GET /range (somewhat).
+                   
+                   Let's only show it for daily view where I know I have the data.
+               */}
+              {viewType === "daily" && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-5 gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-900/30 p-2 rounded">
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-slate-500">ADV</span>
+                      <span className="text-white">{team.advantage || 0}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-slate-500">MAIN</span>
+                      <span className="text-white">{team.main || 0}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-slate-500">SPL</span>
+                      <span className="text-white">{team.special || 0}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-slate-500">ELIM</span>
+                      <span className="text-white">
+                        {team.elimination || 0}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold text-slate-500">IMM</span>
+                      <span className="text-white">{team.immunity || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </Card>
           ))
         )}

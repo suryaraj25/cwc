@@ -240,8 +240,8 @@ export const api = {
     },
 
     // Admin: Leaderboard Management
-    submitTeamScore: async (teamId: string, score: number, date?: string, notes?: string): Promise<any> => {
-        const res = await apiClient.post(`/leaderboard/scores`, { teamId, score, date, notes });
+    submitTeamScore: async (teamId: string, scores: { advantage: number, main: number, special: number, elimination: number, immunity: number }, date?: string, notes?: string): Promise<any> => {
+        const res = await apiClient.post(`/leaderboard/scores`, { teamId, ...scores, date, notes });
         return res.data;
     },
 

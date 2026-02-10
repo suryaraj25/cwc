@@ -12,6 +12,11 @@ interface TeamScore {
   id: string;
   teamId: string;
   score: number;
+  advantage: number;
+  main: number;
+  special: number;
+  elimination: number;
+  immunity: number;
   date: string;
   enteredBy: string;
   notes: string;
@@ -19,13 +24,30 @@ interface TeamScore {
 
 interface TeamWithScore extends Team {
   score: number;
+  advantage: number;
+  main: number;
+  special: number;
+  elimination: number;
+  immunity: number;
   notes: string;
 }
 
 export const AdminScoreManager: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [dailyScores, setDailyScores] = useState<
-    Record<string, { score: number; notes: string; scoreId: string | null }>
+    Record<
+      string,
+      {
+        score: number;
+        advantage: number;
+        main: number;
+        special: number;
+        elimination: number;
+        immunity: number;
+        notes: string;
+        scoreId: string | null;
+      }
+    >
   >({});
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0],
@@ -34,7 +56,13 @@ export const AdminScoreManager: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
-  const [editScore, setEditScore] = useState<number>(0);
+  const [editScores, setEditScores] = useState({
+    advantage: 0,
+    main: 0,
+    special: 0,
+    elimination: 0,
+    immunity: 0,
+  });
   const [editNotes, setEditNotes] = useState<string>("");
 
   const [modalState, setModalState] = useState<ModalProps>({
@@ -76,11 +104,25 @@ export const AdminScoreManager: React.FC = () => {
         // Convert leaderboard response to score map
         const scoreMap: Record<
           string,
-          { score: number; notes: string; scoreId: string | null }
+          {
+            score: number;
+            advantage: number;
+            main: number;
+            special: number;
+            elimination: number;
+            immunity: number;
+            notes: string;
+            scoreId: string | null;
+          }
         > = {};
         scoresData.leaderboard?.forEach((team: any) => {
           scoreMap[team.id] = {
             score: team.score || 0,
+            advantage: team.advantage || 0,
+            main: team.main || 0,
+            special: team.special || 0,
+            elimination: team.elimination || 0,
+            immunity: team.immunity || 0,
             notes: team.notes || "",
             scoreId: team.scoreId || null,
           };
@@ -99,12 +141,19 @@ export const AdminScoreManager: React.FC = () => {
 
   const handleScoreChange = (
     teamId: string,
-    score: number,
+    scores: {
+      advantage: number;
+      main: number;
+      special: number;
+      elimination: number;
+      immunity: number;
+    },
+    totalScore: number,
     scoreId: string | null = null,
   ) => {
     setDailyScores((prev) => ({
       ...prev,
-      [teamId]: { ...prev[teamId], score, scoreId },
+      [teamId]: { ...prev[teamId], ...scores, score: totalScore, scoreId },
     }));
   };
 
@@ -118,11 +167,22 @@ export const AdminScoreManager: React.FC = () => {
   const handleStartEdit = (teamId: string) => {
     const current = dailyScores[teamId] || {
       score: 0,
+      advantage: 0,
+      main: 0,
+      special: 0,
+      elimination: 0,
+      immunity: 0,
       notes: "",
       scoreId: null,
     };
     setEditingTeamId(teamId);
-    setEditScore(current.score);
+    setEditScores({
+      advantage: current.advantage,
+      main: current.main,
+      special: current.special,
+      elimination: current.elimination,
+      immunity: current.immunity,
+    });
     setEditNotes(current.notes);
   };
 
@@ -133,14 +193,20 @@ export const AdminScoreManager: React.FC = () => {
     try {
       const result = await api.submitTeamScore(
         editingTeamId,
-        editScore,
+        editScores,
         selectedDate,
         editNotes,
       );
 
       if (result.success) {
         const scoreId = result.teamScore?._id || result.teamScore?.id || null;
-        handleScoreChange(editingTeamId, editScore, scoreId);
+        const totalScore =
+          editScores.advantage +
+          editScores.main +
+          editScores.special +
+          editScores.elimination +
+          editScores.immunity;
+        handleScoreChange(editingTeamId, editScores, totalScore, scoreId);
         handleNotesChange(editingTeamId, editNotes);
         setEditingTeamId(null);
         toast.success("Score saved successfully!");
@@ -171,7 +237,18 @@ export const AdminScoreManager: React.FC = () => {
         try {
           const result = await api.deleteTeamScore(scoreId);
           if (result.success) {
-            handleScoreChange(teamId, 0, null);
+            handleScoreChange(
+              teamId,
+              {
+                advantage: 0,
+                main: 0,
+                special: 0,
+                elimination: 0,
+                immunity: 0,
+              },
+              0,
+              null,
+            );
             handleNotesChange(teamId, "");
             toast.success("Score deleted successfully!");
           } else {
@@ -198,7 +275,13 @@ export const AdminScoreManager: React.FC = () => {
           try {
             const result = await api.submitTeamScore(
               team.id,
-              score.score,
+              {
+                advantage: score.advantage,
+                main: score.main,
+                special: score.special,
+                elimination: score.elimination,
+                immunity: score.immunity,
+              },
               selectedDate,
               score.notes,
             );
@@ -207,7 +290,18 @@ export const AdminScoreManager: React.FC = () => {
               // Update local state with scoreId
               const scoreId =
                 result.teamScore?._id || result.teamScore?.id || null;
-              handleScoreChange(team.id, score.score, scoreId);
+              handleScoreChange(
+                team.id,
+                {
+                  advantage: score.advantage,
+                  main: score.main,
+                  special: score.special,
+                  elimination: score.elimination,
+                  immunity: score.immunity,
+                },
+                score.score,
+                scoreId,
+              );
             } else {
               failCount++;
             }
@@ -223,11 +317,25 @@ export const AdminScoreManager: React.FC = () => {
         const scoresData = await api.getDailyLeaderboard(selectedDate);
         const scoreMap: Record<
           string,
-          { score: number; notes: string; scoreId: string | null }
+          {
+            score: number;
+            advantage: number;
+            main: number;
+            special: number;
+            elimination: number;
+            immunity: number;
+            notes: string;
+            scoreId: string | null;
+          }
         > = {};
         scoresData.leaderboard?.forEach((team: any) => {
           scoreMap[team.id] = {
             score: team.score || 0,
+            advantage: team.advantage || 0,
+            main: team.main || 0,
+            special: team.special || 0,
+            elimination: team.elimination || 0,
+            immunity: team.immunity || 0,
             notes: team.notes || "",
             scoreId: team.scoreId || null,
           };
@@ -283,7 +391,16 @@ export const AdminScoreManager: React.FC = () => {
       {/* Scores Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team) => {
-          const score = dailyScores[team.id] || { score: 0, notes: "" };
+          const score = dailyScores[team.id] || {
+            score: 0,
+            advantage: 0,
+            main: 0,
+            special: 0,
+            elimination: 0,
+            immunity: 0,
+            notes: "",
+            scoreId: null,
+          };
           const isEditing = editingTeamId === team.id;
 
           return (
@@ -312,21 +429,77 @@ export const AdminScoreManager: React.FC = () => {
                 {/* Score Input */}
                 {isEditing ? (
                   <div className="space-y-3 bg-slate-900/50 p-3 rounded-lg">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">
-                        Score
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={editScore}
-                        onChange={(e) =>
-                          setEditScore(
-                            Math.max(0, parseInt(e.target.value) || 0),
-                          )
-                        }
-                        className="w-full"
-                      />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Input
+                          label="Advantage"
+                          type="number"
+                          value={editScores.advantage}
+                          onChange={(e) =>
+                            setEditScores((prev) => ({
+                              ...prev,
+                              advantage: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full text-sm py-1 h-8"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Main"
+                          type="number"
+                          value={editScores.main}
+                          onChange={(e) =>
+                            setEditScores((prev) => ({
+                              ...prev,
+                              main: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full text-sm py-1 h-8"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Special"
+                          type="number"
+                          value={editScores.special}
+                          onChange={(e) =>
+                            setEditScores((prev) => ({
+                              ...prev,
+                              special: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full text-sm py-1 h-8"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Elimination"
+                          type="number"
+                          value={editScores.elimination}
+                          onChange={(e) =>
+                            setEditScores((prev) => ({
+                              ...prev,
+                              elimination: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full text-sm py-1 h-8"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          label="Immunity"
+                          type="number"
+                          value={editScores.immunity}
+                          onChange={(e) =>
+                            setEditScores((prev) => ({
+                              ...prev,
+                              immunity: parseInt(e.target.value) || 0,
+                            }))
+                          }
+                          className="w-full text-sm py-1 h-8"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">
@@ -362,12 +535,37 @@ export const AdminScoreManager: React.FC = () => {
                     <div className="flex items-end gap-2">
                       <div>
                         <p className="text-xs text-slate-400 uppercase">
-                          Current Score
+                          Total Score
                         </p>
                         <p className="text-3xl font-bold text-indigo-400">
                           {score.score}
                         </p>
                       </div>
+                    </div>
+                    {/* Breakdown */}
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-xs text-slate-400 bg-slate-900/30 p-2 rounded">
+                      <div className="flex justify-between">
+                        <span>Adv:</span>{" "}
+                        <span className="text-white">{score.advantage}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Main:</span>{" "}
+                        <span className="text-white">{score.main}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Spl:</span>{" "}
+                        <span className="text-white">{score.special}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Elim:</span>{" "}
+                        <span className="text-white">{score.elimination}</span>
+                      </div>
+                      <div className="flex justify-between col-span-2">
+                        <span>Immunity:</span>{" "}
+                        <span className="text-white">{score.immunity}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-2">
                       {score.notes && (
                         <p className="text-xs text-slate-500 flex-1 line-clamp-1">
                           Note: {score.notes}
