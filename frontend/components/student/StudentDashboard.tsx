@@ -44,7 +44,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // View type: voting or leaderboard
-  const [viewType, setViewType] = useState<"voting" | "leaderboard">("voting");
+  const [viewType, setViewType] = useState<"voting" | "leaderboard">(
+    config.isVotingOpen ? "voting" : "leaderboard",
+  );
+
+  useEffect(() => {
+    if (!config.isVotingOpen) {
+      setViewType("leaderboard");
+    } else {
+      setViewType("voting");
+    }
+  }, [config.isVotingOpen]);
 
   // Modal State
   const [modalState, setModalState] = useState<ModalProps>({
@@ -189,10 +199,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
     return <LoadingState message="Syncing voting status..." />;
   }
 
-  // 2. Check if window is closed
-  if (!config.isVotingOpen) {
-    return <VotingClosedState config={config} />;
-  }
+  // 2. Voting Interface (Always show if not loading, check isVotingOpen within views)
 
   // 3. Voting Interface
   return (
@@ -265,6 +272,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
               </div>
             </Card>
 
+            {/* Session Status Display - Moved or updated if needed, for now just cleaning up the grid */}
             <Card className="bg-slate-800 border-slate-700 flex items-center justify-center">
               {message ? (
                 <div
@@ -280,30 +288,38 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
               ) : (
                 <div className="flex items-center gap-2 text-slate-500">
                   <Clock size={20} />
-                  <span className="text-sm">Session Active</span>
+                  <span className="text-sm">
+                    {config.isVotingOpen ? "Session Active" : "Session Paused"}
+                  </span>
                 </div>
               )}
             </Card>
           </div>
 
-          {/* Voting Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {teams.map((team) => {
-              const currentVotes = votes[team.id] || 0;
-              const userVotesForTeam =
-                (user?.votes && user.votes[team.id]) || 0;
-              return (
-                <TeamVoteCard
-                  key={team.id}
-                  team={team}
-                  currentVotes={currentVotes}
-                  userTotalVotes={userVotesForTeam}
-                  handleVoteChange={handleVoteChange}
-                  remaining={remaining}
-                />
-              );
-            })}
-          </div>
+          {!config.isVotingOpen ? (
+            <div className="py-12">
+              <VotingClosedState config={config} />
+            </div>
+          ) : (
+            /* Voting Grid */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {teams.map((team) => {
+                const currentVotes = votes[team.id] || 0;
+                const userVotesForTeam =
+                  (user?.votes && user.votes[team.id]) || 0;
+                return (
+                  <TeamVoteCard
+                    key={team.id}
+                    team={team}
+                    currentVotes={currentVotes}
+                    userTotalVotes={userVotesForTeam}
+                    handleVoteChange={handleVoteChange}
+                    remaining={remaining}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {/* Floating Action Button */}
           <div className="fixed bottom-6 left-0 right-0 flex justify-center px-6 z-50">
@@ -322,7 +338,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
       {/* Leaderboard View */}
       {viewType === "leaderboard" && (
         <div className="space-y-6">
-          <Leaderboard />
+          <Leaderboard config={config} />
         </div>
       )}
 

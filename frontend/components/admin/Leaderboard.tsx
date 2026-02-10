@@ -3,7 +3,7 @@ import { Trophy, TrendingUp, Calendar } from "lucide-react";
 import { Card } from "../ui/Card";
 import { api } from "../../services/api";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { UserRole } from "../../types";
+import { UserRole, VotingConfig } from "../../types";
 
 interface LeaderboardEntry {
   rank: number;
@@ -22,14 +22,24 @@ interface LeaderboardEntry {
   lastUpdated: string | null;
 }
 
-export const Leaderboard: React.FC = () => {
+interface LeaderboardProps {
+  config?: VotingConfig;
+}
+
+export const Leaderboard: React.FC<LeaderboardProps> = ({ config }) => {
   const { role } = useAuthStore();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
+    config?.currentSessionDate || new Date().toISOString().split("T")[0],
   );
   const [viewType, setViewType] = useState<"total" | "daily">("total");
+
+  useEffect(() => {
+    if (config?.currentSessionDate) {
+      setSelectedDate(config.currentSessionDate);
+    }
+  }, [config?.currentSessionDate]);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {

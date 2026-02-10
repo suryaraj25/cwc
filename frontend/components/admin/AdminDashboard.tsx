@@ -106,7 +106,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Search States
   const [usersSearchInput, setUsersSearchInput] = useState("");
-  const [selectedYear, seteamVotes: Record\u003Cstring, number>;tSelectedYear] = useState(""); // Year Filter State
+  const [selectedYear, setSelectedYear] = useState(""); // Year Filter State
   const [transactionsSearchInput, setTransactionsSearchInput] = useState("");
 
   // Debounced search values (3 seconds)
@@ -2152,6 +2152,23 @@ export const AdminDashboard: React.FC = () => {
                         })
                       }
                     />
+                    {data.config?.currentSessionDate &&
+                      !configForm.currentSessionDate && (
+                        <p className="mt-2 text-xs text-indigo-400">
+                          Currently Latched to:{" "}
+                          {new Date(
+                            data.config.currentSessionDate,
+                          ).toLocaleDateString()}
+                        </p>
+                      )}
+                    {data.config?.isVotingOpen &&
+                      !data.config?.currentSessionDate && (
+                        <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                          <AlertTriangle size={12} />
+                          Warning: No date latched. Votes will be recorded on
+                          whatever day they are cast.
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>

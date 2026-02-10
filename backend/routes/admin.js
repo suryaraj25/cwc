@@ -71,6 +71,17 @@ async function adminRoutes(fastify, options) {
             config.currentSessionDate = request.body.currentSessionDate;
         }
 
+        // Latch or Update currentSessionDate if opening voting and it's not explicitly provided
+        if (request.body.isVotingOpen === true && !request.body.currentSessionDate) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            // If no date set, or if the set date is from a previous day, update to today
+            if (!config.currentSessionDate || config.currentSessionDate < now) {
+                config.currentSessionDate = now;
+            }
+        }
+
         // Handle other fields via Object.assign, but exclude currentSessionDate as we handled it
         const { currentSessionDate, ...otherProps } = request.body;
         Object.assign(config, otherProps);
