@@ -3,14 +3,48 @@ const Config = require('../models/Config');
 
 async function votingRoutes(fastify, options) {
 
-    // Get Voting Config (Public - no auth required)
+    // Get Voting Config (Public - but enhanced if auth token provided)
     fastify.get('/config', async (request, reply) => {
+        let userSpecificData = {};
+
+        // Check for Auth Header manually since this is a public route
+        // This allows the frontend to fetch config + user status in one go or separately
+        const token = request.headers.authorization?.split(' ')[1];
+        if (token) {
+            try {
+                const decoded = fastify.jwt.verify(token);
+                const user = await fastify.mongo.AuthUser.findById(decoded.id);
+                if (user) {
+                    const config = await Config.findOne() || new Config();
+                    const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+                    const startOfDay = new Date(effectiveDate);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    const endOfDay = new Date(effectiveDate);
+                    endOfDay.setHours(23, 59, 59, 999);
+
+                    const todayTransactions = await VoteTransaction.find({
+                        userId: user._id,
+                        date: { $gte: startOfDay, $lte: endOfDay }
+                    });
+                    const votesUsed = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
+                    userSpecificData = {
+                        votesUsedToday: votesUsed,
+                        remainingToday: (config.dailyQuota || 100) - votesUsed
+                    };
+                }
+            } catch (e) {
+                // Ignore invalid token on public route
+            }
+        }
+
         const config = await Config.findOne() || new Config();
         return {
             isVotingOpen: config.isVotingOpen,
             startTime: config.startTime,
             endTime: config.endTime,
-            dailyQuota: config.dailyQuota || 100
+            dailyQuota: config.dailyQuota || 100,
+            currentSessionDate: config.currentSessionDate,
+            ...userSpecificData
         };
     });
 
@@ -27,15 +61,16 @@ async function votingRoutes(fastify, options) {
             return reply.code(403).send({ success: false, message: 'Voting is currently closed by Admin.' });
         }
 
-        // 2. Check Time Window
-        if (config.startTime && config.endTime) {
+        // 2. Determine Effective Date
+        const effectiveDate = config.currentSessionDate ? new Date(config.currentSessionDate) : new Date();
+
+        // 3. Time Window Check (Skip if currentSessionDate is set - implied override)
+        if (!config.currentSessionDate && config.startTime && config.endTime) {
             const now = new Date();
             if (now < config.startTime || now > config.endTime) {
                 return reply.code(403).send({ success: false, message: 'Voting is only allowed between the scheduled times.' });
             }
         }
-
-
 
         // 2.1 Check Self-Voting (Backend Enforcement)
         if (user.teamId) {
@@ -44,13 +79,15 @@ async function votingRoutes(fastify, options) {
             }
         }
 
-        // 3. Calculate Votes Used Today
-        const startOfDay = new Date();
+        // 4. Calculate Votes Used Today (Relative to effectiveDate)
+        const startOfDay = new Date(effectiveDate);
         startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(effectiveDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
         const todayTransactions = await VoteTransaction.find({
             userId: user._id,
-            createdAt: { $gte: startOfDay }
+            date: { $gte: startOfDay, $lte: endOfDay }
         });
 
         const votesUsedToday = todayTransactions.reduce((sum, t) => sum + t.votes, 0);
@@ -67,7 +104,7 @@ async function votingRoutes(fastify, options) {
             });
         }
 
-        // 4. Record Transactions & Update User
+        // 5. Record Transactions & Update User
         const currentVotes = user.votes || new Map();
 
         for (const [teamId, count] of Object.entries(votes)) {
@@ -81,13 +118,13 @@ async function votingRoutes(fastify, options) {
                     userId: user._id,
                     teamId: teamId,
                     votes: count,
-                    date: new Date()
+                    date: effectiveDate // Use effective date
                 });
             }
         }
 
         user.votes = currentVotes;
-        user.lastVotedAt = new Date();
+        user.lastVotedAt = effectiveDate; // Use effective date
         await user.save();
 
         // Emit real-time update to Admin Dashboard

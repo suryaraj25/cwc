@@ -50,9 +50,12 @@ async function adminRoutes(fastify, options) {
             users,
             totalUsers,
             teams,
-            config,
             teamVotes,
-            deviceCount: users.filter(u => u.boundDeviceId).length
+            deviceCount: users.filter(u => u.boundDeviceId).length,
+            config: {
+                ...config.toJSON(),
+                currentSessionDate: config.currentSessionDate // Expose this
+            }
         };
     });
 
@@ -61,7 +64,17 @@ async function adminRoutes(fastify, options) {
         let config = await Config.findOne();
         if (!config) config = new Config();
 
-        Object.assign(config, request.body);
+        // Handle currentSessionDate explicitly to allow null
+        if (request.body.currentSessionDate === null) {
+            config.currentSessionDate = null;
+        } else if (request.body.currentSessionDate) {
+            config.currentSessionDate = request.body.currentSessionDate;
+        }
+
+        // Handle other fields via Object.assign, but exclude currentSessionDate as we handled it
+        const { currentSessionDate, ...otherProps } = request.body;
+        Object.assign(config, otherProps);
+
         await config.save();
 
         if (fastify.io) fastify.io.emit('admin:data-update');

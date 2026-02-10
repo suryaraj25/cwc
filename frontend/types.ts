@@ -29,6 +29,7 @@ export interface VotingConfig {
   startTime: string | null;
   endTime: string | null;
   dailyQuota: number;
+  currentSessionDate?: string | null;
 }
 
 export interface DeviceRegistry {

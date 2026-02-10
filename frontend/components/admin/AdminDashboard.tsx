@@ -106,6 +106,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Search States
   const [usersSearchInput, setUsersSearchInput] = useState("");
+  const [selectedYear, setSelectedYear] = useState(""); // Year Filter State
   const [transactionsSearchInput, setTransactionsSearchInput] = useState("");
 
   // Debounced search values (3 seconds)
@@ -139,7 +140,8 @@ export const AdminDashboard: React.FC = () => {
   const [configForm, setConfigForm] = useState<{
     startTime: string;
     endTime: string;
-  }>({ startTime: "", endTime: "" });
+    currentSessionDate: string;
+  }>({ startTime: "", endTime: "", currentSessionDate: "" });
 
   // Admin Management State
   const [createAdminOpen, setCreateAdminOpen] = useState(false);
@@ -319,6 +321,9 @@ export const AdminDashboard: React.FC = () => {
         setConfigForm({
           startTime: d.config.startTime ? toISTString(d.config.startTime) : "",
           endTime: d.config.endTime ? toISTString(d.config.endTime) : "",
+          currentSessionDate: d.config.currentSessionDate
+            ? new Date(d.config.currentSessionDate).toISOString().split("T")[0]
+            : "",
         });
       }
     } catch (e) {
@@ -457,9 +462,28 @@ export const AdminDashboard: React.FC = () => {
       // Trying to open
       if (start && end) {
         if (now < start || now > end) {
-          toast.warning(
-            "Cannot start voting: Current time is outside the configured Start/End window. Please adjust the times in Settings.",
-            5000,
+          showModal(
+            "Force Start Voting Session?",
+            "The current time is outside the scheduled Start/End window. Starting now will CLEAR the schedule and enable voting immediately. Are you sure?",
+            "warning",
+            async () => {
+              try {
+                // Clear schedule and open
+                await api.updateConfig({
+                  isVotingOpen: true,
+                  startTime: null,
+                  endTime: null,
+                });
+                toast.success(
+                  "Voting session forcefully started (Schedule Cleared)!",
+                );
+                refreshData();
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to force start session.");
+              }
+            },
+            { confirmLabel: "Force Start", confirmVariant: "destructive" },
           );
           return;
         }
@@ -515,6 +539,7 @@ export const AdminDashboard: React.FC = () => {
       endTime: configForm.endTime
         ? new Date(`${configForm.endTime}+05:30`).toISOString()
         : null,
+      currentSessionDate: configForm.currentSessionDate || null,
     });
     toast.success("Voting Window Updated Successfully");
     refreshData();
@@ -808,6 +833,11 @@ export const AdminDashboard: React.FC = () => {
     0,
   );
   const activeUsers = data.users.filter((u: User) => u.lastVotedAt).length;
+
+  const filteredUsers = data.users.filter((user: User) => {
+    if (selectedYear && user.year !== selectedYear) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-8 animate-fade-in-up pb-20">
@@ -1394,17 +1424,30 @@ export const AdminDashboard: React.FC = () => {
                 <FileSpreadsheet className="w-4 h-4 mr-2" /> Download CSV
               </Button>
             </div>
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search by name, roll, email, dept..."
-                className="w-full bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                value={usersSearchInput}
-                onChange={(e: { target: { value: any } }) =>
-                  setUsersSearchInput(e.target.value)
-                }
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by name, roll, email, dept..."
+                  className="w-full bg-slate-900 border border-slate-600 rounded-xl pl-10 pr-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                  value={usersSearchInput}
+                  onChange={(e: { target: { value: any } }) =>
+                    setUsersSearchInput(e.target.value)
+                  }
+                />
+              </div>
+              <select
+                className="bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm w-full sm:w-auto"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+              >
+                <option value="">All Years</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+              </select>
             </div>
           </div>
 
@@ -1422,7 +1465,7 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {data.users.map((user: User) => (
+                  {filteredUsers.map((user: User) => (
                     <React.Fragment key={user.id}>
                       <tr
                         className={`group hover:bg-slate-700/30 transition-colors cursor-pointer ${expandedUser === user.id ? "bg-slate-700/30" : ""}`}
@@ -1672,7 +1715,7 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Mobile Card View */}
           <div className="md:hidden space-y-3">
-            {data.users.map((user: User) => (
+            {filteredUsers.map((user: User) => (
               <div
                 key={user.id}
                 className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg"
@@ -2082,6 +2125,42 @@ export const AdminDashboard: React.FC = () => {
                         })
                       }
                       required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Override */}
+              <div className="pt-6 border-t border-slate-700">
+                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                  <Clock className="text-orange-500" />
+                  Time Travel (Session Override)
+                </h4>
+                <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
+                  <div className="text-sm text-slate-400 mb-4">
+                    <strong>Advanced:</strong> Set a custom date for the voting
+                    session. This allows you to open a session for a past or
+                    future date (e.g., "Yesterday's Voting"). All votes cast
+                    while this is set will be recorded under this date.
+                    <br />
+                    <span className="text-orange-400">
+                      Leave empty for normal operation.
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Override Session Date
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full bg-slate-800 border border-slate-600 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:outline-none [color-scheme:dark]"
+                      value={configForm.currentSessionDate}
+                      onChange={(e) =>
+                        setConfigForm({
+                          ...configForm,
+                          currentSessionDate: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
