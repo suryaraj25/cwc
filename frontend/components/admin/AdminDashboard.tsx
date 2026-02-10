@@ -1549,45 +1549,43 @@ export const AdminDashboard: React.FC = () => {
                                               <span className="font-bold text-white bg-slate-900 px-3 py-1 rounded-md text-xs">
                                                 {count} Votes
                                               </span>
-                                              {adminRole === "SUPER_ADMIN" && (
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    showModal(
-                                                      "Delete Team Votes",
-                                                      `Are you sure you want to delete ${count} vote(s) for "${team?.name || "this team"}" from this user?`,
-                                                      "warning",
-                                                      async () => {
-                                                        try {
-                                                          await api.deleteUserTeamVotes(
-                                                            user.id,
-                                                            tid,
-                                                          );
-                                                          toast.success(
-                                                            `Votes for ${team?.name || "team"} deleted`,
-                                                          );
-                                                          refreshData();
-                                                        } catch (error: any) {
-                                                          toast.error(
-                                                            error.response?.data
-                                                              ?.message ||
-                                                              "Failed to delete team votes",
-                                                          );
-                                                        }
-                                                      },
-                                                      {
-                                                        confirmVariant:
-                                                          "destructive",
-                                                        confirmLabel: "Delete",
-                                                      },
-                                                    );
-                                                  }}
-                                                  className="p-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                                                  title="Delete votes for this team"
-                                                >
-                                                  <Trash2 size={14} />
-                                                </button>
-                                              )}
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  showModal(
+                                                    "Delete Team Votes",
+                                                    `Are you sure you want to delete ${count} vote(s) for "${team?.name || "this team"}" from this user?`,
+                                                    "warning",
+                                                    async () => {
+                                                      try {
+                                                        await api.deleteUserTeamVotes(
+                                                          user.id,
+                                                          tid,
+                                                        );
+                                                        toast.success(
+                                                          `Votes for ${team?.name || "team"} deleted`,
+                                                        );
+                                                        refreshData();
+                                                      } catch (error: any) {
+                                                        toast.error(
+                                                          error.response?.data
+                                                            ?.message ||
+                                                            "Failed to delete team votes",
+                                                        );
+                                                      }
+                                                    },
+                                                    {
+                                                      confirmVariant:
+                                                        "destructive",
+                                                      confirmLabel: "Delete",
+                                                    },
+                                                  );
+                                                }}
+                                                className="p-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                                title="Delete votes for this team"
+                                              >
+                                                <Trash2 size={14} />
+                                              </button>
                                             </div>
                                           </div>
                                         );
@@ -1680,17 +1678,13 @@ export const AdminDashboard: React.FC = () => {
                                       <UserCog size={16} /> Del User
                                     </Button>
 
-                                    {adminRole === "SUPER_ADMIN" && (
-                                      <Button
-                                        variant="danger"
-                                        className="flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20"
-                                        onClick={() =>
-                                          handleDeleteVotes(user.id)
-                                        }
-                                      >
-                                        <Trash2 size={16} /> Del Votes
-                                      </Button>
-                                    )}
+                                    <Button
+                                      variant="danger"
+                                      className="flex items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20"
+                                      onClick={() => handleDeleteVotes(user.id)}
+                                    >
+                                      <Trash2 size={16} /> Del Votes
+                                    </Button>
 
                                     <Button
                                       variant="secondary"
@@ -1804,42 +1798,40 @@ export const AdminDashboard: React.FC = () => {
                                   <span className="font-bold text-white bg-slate-900 px-2 py-0.5 rounded-md text-xs">
                                     {count}
                                   </span>
-                                  {adminRole === "SUPER_ADMIN" && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        showModal(
-                                          "Delete Team Votes",
-                                          `Delete ${count} vote(s) for "${team?.name || "this team"}"?`,
-                                          "warning",
-                                          async () => {
-                                            try {
-                                              await api.deleteUserTeamVotes(
-                                                user.id,
-                                                tid,
-                                              );
-                                              toast.success(
-                                                `Votes for ${team?.name || "team"} deleted`,
-                                              );
-                                              refreshData();
-                                            } catch (error: any) {
-                                              toast.error(
-                                                error.response?.data?.message ||
-                                                  "Failed to delete team votes",
-                                              );
-                                            }
-                                          },
-                                          {
-                                            confirmVariant: "destructive",
-                                            confirmLabel: "Delete",
-                                          },
-                                        );
-                                      }}
-                                      className="p-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      showModal(
+                                        "Delete Team Votes",
+                                        `Delete ${count} vote(s) for "${team?.name || "this team"}"?`,
+                                        "warning",
+                                        async () => {
+                                          try {
+                                            await api.deleteUserTeamVotes(
+                                              user.id,
+                                              tid,
+                                            );
+                                            toast.success(
+                                              `Votes for ${team?.name || "team"} deleted`,
+                                            );
+                                            refreshData();
+                                          } catch (error: any) {
+                                            toast.error(
+                                              error.response?.data?.message ||
+                                                "Failed to delete team votes",
+                                            );
+                                          }
+                                        },
+                                        {
+                                          confirmVariant: "destructive",
+                                          confirmLabel: "Delete",
+                                        },
+                                      );
+                                    }}
+                                    className="p-1 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
                                 </div>
                               </div>
                             );
@@ -1914,15 +1906,13 @@ export const AdminDashboard: React.FC = () => {
                       >
                         <UserCog size={14} /> Del User
                       </Button>
-                      {adminRole === "SUPER_ADMIN" && (
-                        <Button
-                          variant="danger"
-                          className="flex items-center justify-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 text-xs py-2"
-                          onClick={() => handleDeleteVotes(user.id)}
-                        >
-                          <Trash2 size={14} /> Del Votes
-                        </Button>
-                      )}
+                      <Button
+                        variant="danger"
+                        className="flex items-center justify-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 text-xs py-2"
+                        onClick={() => handleDeleteVotes(user.id)}
+                      >
+                        <Trash2 size={14} /> Del Votes
+                      </Button>
                     </div>
                   </div>
                 )}

@@ -298,11 +298,6 @@ async function adminRoutes(fastify, options) {
 
     // Delete User Votes (Super Admin Only)
     fastify.delete('/users/:id/votes', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
-        // PROTECT: Only Super Admin can delete votes
-        if (request.authAdmin.role !== 'SUPER_ADMIN') {
-            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
-        }
-
         const userId = request.params.id;
         const user = await User.findById(userId);
 
@@ -343,11 +338,6 @@ async function adminRoutes(fastify, options) {
 
     // Delete User Votes for Specific Team (Super Admin Only)
     fastify.delete('/users/:userId/votes/:teamId', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
-        // PROTECT: Only Super Admin can delete votes
-        if (request.authAdmin.role !== 'SUPER_ADMIN') {
-            return reply.code(403).send({ success: false, message: 'Forbidden: Super Admin Access Required' });
-        }
-
         const { userId, teamId } = request.params;
         const user = await User.findById(userId);
 
