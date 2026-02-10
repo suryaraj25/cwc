@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { User, Team, VotingConfig } from '../types';
 
-const API_BASE = 'https://cwc-b4ir.onrender.com/api';
+const API_BASE = 'http://localhost:5000/api';
 
 // Create an axios instance with credentials support
 const apiClient = axios.create({
@@ -262,5 +262,49 @@ export const api = {
     getScoresSummary: async (): Promise<any> => {
         const res = await apiClient.get(`/leaderboard/scores-summary`);
         return res.data;
-    }
+    },
+    // Whitelist Management
+    getWhitelist: async (): Promise<any[]> => {
+        const res = await apiClient.get("/admin/whitelist");
+        return res.data.emails;
+    },
+
+    addToWhitelist: async (emails: string[]): Promise<any> => {
+        const res = await apiClient.post("/admin/whitelist", { emails });
+        return res.data;
+    },
+
+    removeFromWhitelist: async (id: string): Promise<any> => {
+        const res = await apiClient.delete(`/admin/whitelist/${id}`);
+        return res.data;
+    },
+
+    // Blacklist Management
+    getBlacklist: async (): Promise<any[]> => {
+        const res = await apiClient.get("/admin/blacklist");
+        return res.data.users;
+    },
+
+    removeFromBlacklist: async (id: string): Promise<any> => {
+        const res = await apiClient.delete(`/admin/blacklist/${id}`);
+        return res.data;
+    },
+
+    // User Approval & Blocking
+    getPendingUsers: async (): Promise<User[]> => {
+        const res = await apiClient.get("/admin/users/pending");
+        return res.data.users;
+    },
+
+    approveUser: async (userId: string): Promise<any> => {
+        const res = await apiClient.post(`/admin/users/${userId}/approve`);
+        return res.data;
+    },
+
+    blockUser: async (userId: string, reason?: string): Promise<any> => {
+        const res = await apiClient.post(`/admin/users/${userId}/block`, {
+            reason,
+        });
+        return res.data;
+    },
 };

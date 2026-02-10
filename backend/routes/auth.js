@@ -3,6 +3,7 @@ const Admin = require('../models/Admin');
 const VoteTransaction = require('../models/VoteTransaction');
 const AuditLog = require('../models/AuditLog');
 const WhitelistedEmail = require('../models/WhitelistedEmail');
+const BlacklistedUser = require('../models/BlacklistedUser');
 const bcrypt = require('bcrypt');
 const UserRole = { GUEST: 'GUEST', STUDENT: 'STUDENT', ADMIN: 'ADMIN' }; // Simple enum
 
@@ -12,13 +13,21 @@ async function authRoutes(fastify, options) {
     fastify.post('/register', async (request, reply) => {
         const userData = request.body;
 
-        // 0. Whitelist Check
-        const isWhitelisted = await WhitelistedEmail.findOne({ email: userData.email.toLowerCase() });
-        if (!isWhitelisted) {
-            return reply.code(403).send({ success: false, message: 'This email is not authorized for registration. Please contact the administrator.' });
+        // 0. Check Blacklist
+        const isBlacklisted = await BlacklistedUser.findOne({
+            $or: [{ email: userData.email.toLowerCase() }, { rollNo: userData.rollNo }]
+        });
+
+        if (isBlacklisted) {
+            // Return specific code for frontend to redirect
+            return reply.code(403).send({ success: false, message: 'This account has been blacklisted.', status: 'BLACKLISTED' });
         }
 
-        // 1. Check existing
+        // 1. Whitelist Check & Approval Status
+        const isWhitelisted = await WhitelistedEmail.findOne({ email: userData.email.toLowerCase() });
+        const isApproved = !!isWhitelisted; // Auto-approve if whitelisted
+
+        // 2. Check existing
         const existing = await User.findOne({
             $or: [{ email: userData.email }, { rollNo: userData.rollNo }]
         });
@@ -27,14 +36,18 @@ async function authRoutes(fastify, options) {
             return reply.code(400).send({ success: false, message: 'User with this Email or Roll No already exists.' });
         }
 
-        // 2. Hash password with bcrypt
+        // 3. Hash password with bcrypt
         const hashedPassword = await bcrypt.hash(userData.passwordHash, 10);
 
-        // 3. Create User with hashed password
-        const user = new User({ ...userData, passwordHash: hashedPassword });
+        // 4. Create User with hashed password and approval status
+        const user = new User({ ...userData, passwordHash: hashedPassword, isApproved });
         await user.save();
 
-        return { success: true, message: 'Registration Successful', user };
+        if (isApproved) {
+            return { success: true, message: 'Registration Successful', user, status: 'APPROVED' };
+        } else {
+            return { success: true, message: 'Registration Successful. Account pending approval.', user, status: 'PENDING' };
+        }
     });
 
     // Login
@@ -50,6 +63,11 @@ async function authRoutes(fastify, options) {
         // 2. Verify user exists and password is correct
         if (!user || !(await bcrypt.compare(passwordHash, user.passwordHash))) {
             return reply.code(404).send({ success: false, message: 'Invalid Credentials.' });
+        }
+
+        // 2.1 Check Approval Status
+        if (!user.isApproved) {
+            return reply.code(403).send({ success: false, message: 'Account pending approval.', status: 'PENDING' });
         }
 
         // 3. Single Session Enforcement Logic

@@ -9,6 +9,7 @@ export interface User {
   year: string;
   passwordHash: string; // In real app, hash. Here, plain text for simulation.
   boundDeviceId: string | null;
+  isApproved?: boolean;
   votes: Record<string, number>; // teamId -> count
   lastVotedAt?: string;
   currentSessionToken?: string;

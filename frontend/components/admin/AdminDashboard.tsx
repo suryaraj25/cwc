@@ -53,8 +53,9 @@ import { AuditLogsTable } from "./AuditLogsTable";
 import { Modal, ModalProps } from "../ui/Modal";
 import { toast } from "../../stores/useToastStore";
 import { AdminScoreManager } from "./AdminScoreManager";
-import { useAuthStore  } from "../../stores/useAuthStore.ts";
-import {useDebounce} from "../../hooks/useDebounce.ts"
+import { UserAccessControl } from "./UserAccessControl";
+import { useAuthStore } from "../../stores/useAuthStore.ts";
+import { useDebounce } from "../../hooks/useDebounce.ts";
 
 // Modern Color Palette for Charts
 const COLORS = [
@@ -80,7 +81,9 @@ export const AdminDashboard: React.FC = () => {
     | "audit_logs"
     | "admins"
     | "leaderboard"
+    | "access_control"
   >("dashboard");
+
   const [data, setData] = useState<{
     users: User[];
     totalUsers: number;
@@ -786,6 +789,9 @@ export const AdminDashboard: React.FC = () => {
         toggleVoting={toggleVoting}
         userRole={adminRole || "ADMIN"}
       />
+
+      {/* --- ACCESS CONTROL TAB --- */}
+      {activeTab === "access_control" && <UserAccessControl />}
 
       {/* --- DASHBOARD TAB --- */}
       {activeTab === "dashboard" && (

@@ -22,7 +22,8 @@ interface AdminNavBarProps {
     | "transactions"
     | "audit_logs"
     | "admins"
-    | "leaderboard";
+    | "leaderboard"
+    | "access_control";
   setActiveTab: (
     tab:
       | "dashboard"
@@ -32,7 +33,8 @@ interface AdminNavBarProps {
       | "transactions"
       | "audit_logs"
       | "admins"
-      | "leaderboard",
+      | "leaderboard"
+      | "access_control",
   ) => void;
   config: VotingConfig;
   toggleVoting: () => void;
@@ -64,6 +66,11 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             id: "audit_logs",
             icon: Shield,
             label: "Audit Logs",
+          },
+          {
+            id: "access_control",
+            icon: Shield,
+            label: "Access Control",
           },
         ]
       : []),

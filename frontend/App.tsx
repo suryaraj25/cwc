@@ -13,6 +13,8 @@ import { StudentAuth } from "./components/auth/StudentAuth";
 import { AdminLogin } from "./components/auth/AdminLogin";
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
+import { ApprovalPending } from "./pages/ApprovalPending";
+import { AccountBlacklisted } from "./pages/AccountBlacklisted";
 import { UserRole } from "./types";
 import { Fingerprint, Shield } from "lucide-react";
 import { AiOutlineLogout } from "react-icons/ai";
@@ -75,6 +77,8 @@ const App: React.FC = () => {
           />
         </Route>
 
+        <Route path="/approval-pending" element={<ApprovalPending />} />
+        <Route path="/account-blacklisted" element={<AccountBlacklisted />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

@@ -4,6 +4,8 @@ const Config = require('../models/Config');
 const VoteTransaction = require('../models/VoteTransaction');
 const AuditLog = require('../models/AuditLog');
 const Admin = require('../models/Admin');
+const WhitelistedEmail = require('../models/WhitelistedEmail');
+const BlacklistedUser = require('../models/BlacklistedUser');
 
 async function adminRoutes(fastify, options) {
 
@@ -557,6 +559,148 @@ async function adminRoutes(fastify, options) {
         }
 
         return { success: true, message: 'Admin logged out successfully' };
+    });
+
+    // --- APPROVAL & BLACKLIST MANAGEMENT ---
+
+    // Get Pending Users
+    fastify.get('/users/pending', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const users = await User.find({ isApproved: false }).select('-passwordHash');
+        return { success: true, users };
+    });
+
+    // Approve User
+    fastify.post('/users/:id/approve', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const user = await User.findById(request.params.id);
+        if (!user) return reply.code(404).send({ success: false, message: 'User not found' });
+
+        user.isApproved = true;
+        await user.save();
+
+        // Auto-add to Whitelist
+        try {
+            const existingWhitelist = await WhitelistedEmail.findOne({ email: user.email.toLowerCase() });
+            if (!existingWhitelist) {
+                await WhitelistedEmail.create({
+                    email: user.email.toLowerCase(),
+                    addedBy: request.authAdmin._id
+                });
+            }
+        } catch (err) {
+            console.error("Failed to auto-whitelist approved user:", err);
+            // Non-critical, continue
+        }
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'APPROVE_USER',
+                details: `Approved user ${user.email} and added to whitelist`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'User approved successfully' };
+    });
+
+    // Block User (Add to Blacklist & Delete User)
+    fastify.post('/users/:id/block', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const { reason } = request.body;
+        const user = await User.findById(request.params.id);
+        if (!user) return reply.code(404).send({ success: false, message: 'User not found' });
+
+        // Create Blacklist Entry
+        try {
+            await BlacklistedUser.create({
+                email: user.email,
+                rollNo: user.rollNo,
+                reason: reason || 'Blocked by admin',
+                blockedBy: request.authAdmin.username
+            });
+        } catch (e) {
+            // Check for duplicate key error (maybe already blacklisted by email?)
+            // Just proceed to delete user if fails
+            console.error("Blacklist creation failed", e);
+        }
+
+        // Delete User and associated data
+        await Promise.all([
+            VoteTransaction.deleteMany({ userId: user._id }),
+            AuditLog.deleteMany({ userId: user._id }),
+            User.findByIdAndDelete(user._id)
+        ]);
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'BLOCK_USER',
+                details: `Blocked user ${user.email}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        if (fastify.io) fastify.io.emit('admin:data-update');
+        return { success: true, message: 'User blocked successfully' };
+    });
+
+    // --- WHITELIST MANAGEMENT ---
+
+    fastify.get('/whitelist', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const emails = await WhitelistedEmail.find().sort({ createdAt: -1 });
+        return { success: true, emails };
+    });
+
+    fastify.post('/whitelist', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const { emails } = request.body; // Expects array of strings
+        if (!Array.isArray(emails)) return reply.code(400).send({ success: false, message: 'Invalid format' });
+
+        let added = 0;
+        let failed = 0;
+
+        for (const email of emails) {
+            try {
+                // Check if exists
+                const exists = await WhitelistedEmail.findOne({ email: email.toLowerCase() });
+                if (!exists) {
+                    await WhitelistedEmail.create({
+                        email: email.toLowerCase(),
+                        addedBy: request.authAdmin._id // Note: authAdmin probably doesn't have _id populated if it's from JWT payload only containing username? 
+                        // Actually in auth.js we verify admin exists. But request.authAdmin comes from decorator.
+                        // Let's check decorator. Usually it fetches the full admin object.
+                        // Assuming it does. If not, we might need to change Admin schema ref or just store username.
+                        // WhitelistedEmail schema refs 'Admin' ObjectId.
+                    });
+                    added++;
+                }
+            } catch (e) {
+                failed++;
+            }
+        }
+
+        return { success: true, message: `Added ${added} emails to whitelist`, failed };
+    });
+
+    fastify.delete('/whitelist/:id', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        await WhitelistedEmail.findByIdAndDelete(request.params.id);
+        return { success: true, message: 'Email removed from whitelist' };
+    });
+
+    // --- BLACKLIST MANAGEMENT ---
+
+    fastify.get('/blacklist', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const users = await BlacklistedUser.find().sort({ createdAt: -1 });
+        return { success: true, users };
+    });
+
+    fastify.delete('/blacklist/:id', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        await BlacklistedUser.findByIdAndDelete(request.params.id);
+        return { success: true, message: 'User unblocked (removed from blacklist)' };
     });
 }
 

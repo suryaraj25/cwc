@@ -12,7 +12,7 @@ import { UserPlus, LogIn, Lock, AlertCircle, KeyRound } from "lucide-react";
 
 interface StudentAuthProps {}
 
-const BITS_EMAIL_REGEX = /^[a-z]+(\.[a-z]{2,5}[0-9]{2})@bitsathy\.ac\.in$/;
+const BITS_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const StudentAuth: React.FC<StudentAuthProps> = () => {
   const { login } = useAuthStore();
@@ -107,9 +107,7 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
         if (!formData.rollNo || !formData.email || !formData.name)
           throw new Error("All fields are required");
         if (!BITS_EMAIL_REGEX.test(formData.email)) {
-          throw new Error(
-            "Invalid email format. Use format like name.dept-year@bitsathy.ac.in",
-          );
+          throw new Error("Invalid email format.");
         }
         const result = await api.register({
           name: formData.name,
@@ -134,17 +132,30 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
             navigate("/dashboard");
           } else {
             console.log("loginResult", loginResult);
-            setError(loginResult.message);
+            if (
+              (loginResult as any).message === "Account pending approval." ||
+              (loginResult as any).status === "PENDING"
+            ) {
+              navigate("/approval-pending");
+            } else if ((loginResult as any).status === "BLACKLISTED") {
+              navigate("/account-blacklisted");
+            } else {
+              setError(loginResult.message);
+            }
           }
         } else {
-          setError(result.message);
+          if ((result as any).status === "PENDING") {
+            navigate("/approval-pending");
+          } else if ((result as any).status === "BLACKLISTED") {
+            navigate("/account-blacklisted");
+          } else {
+            setError(result.message);
+          }
         }
       } else {
         // Login
         if (!BITS_EMAIL_REGEX.test(formData.email)) {
-          throw new Error(
-            "Invalid email format. Use format like name.dept-year@bitsathy.ac.in",
-          );
+          throw new Error("Invalid email format.");
         }
         const result = await api.login(
           formData.rollNo || formData.email,
@@ -169,7 +180,16 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
           }
         } else {
           console.log("result", result);
-          setError(result.message);
+          if (
+            (result as any).message === "Account pending approval." ||
+            (result as any).status === "PENDING"
+          ) {
+            navigate("/approval-pending");
+          } else if ((result as any).status === "BLACKLISTED") {
+            navigate("/account-blacklisted");
+          } else {
+            setError(result.message);
+          }
         }
       }
     } catch (err: any) {
@@ -314,28 +334,13 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
                 required
               />
               <Input
-                label="Email (@bitsathy.ac.in)"
+                label="Email"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="student@bitsathy.ac.in"
+                placeholder="student@example.com"
                 required
-                onBlur={async (e) => {
-                  const email = e.target.value;
-                  if (email && BITS_EMAIL_REGEX.test(email)) {
-                    if (isRegistering) {
-                      const res = await api.checkEmail(email);
-                      if (!res.isWhitelisted) {
-                        setError(
-                          "This email is not authorized for registration. Please contact the administrator.",
-                        );
-                      } else {
-                        setError(null);
-                      }
-                    }
-                  }
-                }}
               />
               <div className="grid grid-cols-2 gap-4">
                 <Input

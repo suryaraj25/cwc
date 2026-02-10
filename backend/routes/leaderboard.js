@@ -215,7 +215,7 @@ async function leaderboardRoutes(fastify, options) {
                 adminId: request.authAdmin.username,
                 userType: 'ADMIN',
                 action: 'UPDATE_TEAM_SCORE',
-                details: `Updated score for team "${team.name}" to ${score}`,
+                details: `Updated score for team "${team.name}" to ${totalScore}`,
                 ipAddress: request.ip,
                 userAgent: request.headers['user-agent']
             });
