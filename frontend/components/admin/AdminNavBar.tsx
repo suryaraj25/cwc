@@ -83,6 +83,11 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
             icon: Shield,
             label: "Access Control",
           },
+          {
+            id: "transactions",
+            icon: FileSpreadsheet,
+            label: "Transactions",
+          },
   ];
 
   return (
