@@ -543,25 +543,25 @@ export const AdminScoreManager: React.FC = () => {
                       </div>
                     </div>
                     {/* Breakdown */}
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-xs text-slate-400 bg-slate-900/30 p-2 rounded">
-                      <div className="flex justify-between">
-                        <span>Adv:</span>{" "}
+                    <div className="grid grid-cols-5 gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-900/30 p-2 rounded mt-2">
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-500">ADV</span>
                         <span className="text-white">{score.advantage}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Main:</span>{" "}
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-500">MAIN</span>
                         <span className="text-white">{score.main}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Spl:</span>{" "}
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-500">SPL</span>
                         <span className="text-white">{score.special}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Elim:</span>{" "}
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-500">ELIM</span>
                         <span className="text-white">{score.elimination}</span>
                       </div>
-                      <div className="flex justify-between col-span-2">
-                        <span>Immunity:</span>{" "}
+                      <div className="flex flex-col items-center">
+                        <span className="font-bold text-slate-500">IMM</span>
                         <span className="text-white">{score.immunity}</span>
                       </div>
                     </div>
