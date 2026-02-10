@@ -78,6 +78,11 @@ export const AdminNavBar: React.FC<AdminNavBarProps> = ({
     { id: "users", icon: Users, label: "Students" },
     { id: "settings", icon: Clock, label: "Schedule" },
     { id: "leaderboard", icon: Trophy, label: "Leaderboard" },
+    {
+            id: "access_control",
+            icon: Shield,
+            label: "Access Control",
+          },
   ];
 
   return (
