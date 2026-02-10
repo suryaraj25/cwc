@@ -1913,6 +1913,13 @@ export const AdminDashboard: React.FC = () => {
                       >
                         <Trash2 size={14} /> Del Votes
                       </Button>
+                      <Button
+                        variant="secondary"
+                        className="flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20"
+                        onClick={() => handleAssignTeam(user)}
+                      >
+                        <Users size={16} /> Assign Team
+                      </Button>
                     </div>
                   </div>
                 )}
