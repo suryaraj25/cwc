@@ -233,6 +233,42 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  const handleAssignTeam = (user: User) => {
+    let selectedTeamId = user.teamId || "";
+    showModal(
+      "Assign Team",
+      <div className="space-y-4">
+        <p className="text-slate-300">
+          Assign <strong>{user.name}</strong> to a team. This will prevent them
+          from voting for this team.
+        </p>
+        <select
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+          defaultValue={selectedTeamId}
+          onChange={(e) => (selectedTeamId = e.target.value)}
+        >
+          <option value="">-- No Team --</option>
+          {data?.teams.map((team: Team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+      </div>,
+      "confirm",
+      async () => {
+        try {
+          await api.assignTeam(user.id, selectedTeamId || null);
+          toast.success("Team assigned successfully");
+          refreshData();
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || "Failed to assign team");
+        }
+      },
+      { confirmLabel: "Save Assignment" },
+    );
+  };
+
   // Modal State
   const [modalState, setModalState] = useState<ModalProps>({
     isOpen: false,
@@ -1560,6 +1596,14 @@ export const AdminDashboard: React.FC = () => {
                                       {user.boundDeviceId || "Unbound"}
                                     </span>
                                   </div>
+                                  <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-500">Team</span>
+                                    <span className="text-emerald-400 font-medium">
+                                      {data.teams.find(
+                                        (t: Team) => t.id === user.teamId,
+                                      )?.name || "None"}
+                                    </span>
+                                  </div>
 
                                   <div className="pt-4 mt-4 border-t border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {adminRole === "SUPER_ADMIN" && (
@@ -1604,6 +1648,14 @@ export const AdminDashboard: React.FC = () => {
                                         <Trash2 size={16} /> Del Votes
                                       </Button>
                                     )}
+
+                                    <Button
+                                      variant="secondary"
+                                      className="flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20"
+                                      onClick={() => handleAssignTeam(user)}
+                                    >
+                                      <Users size={16} /> Assign Team
+                                    </Button>
                                   </div>
                                 </div>
                               </div>

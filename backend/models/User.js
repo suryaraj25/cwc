@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
     currentSessionToken: { type: String, default: null }, // For Single Session Enforcement
     mustChangePassword: { type: Boolean, default: false }, // Set to true when admin resets password
     isApproved: { type: Boolean, default: false }, // User approval status
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null }, // Team the user belongs to
     votes: {
         type: Map,
         of: Number,

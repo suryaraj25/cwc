@@ -649,6 +649,37 @@ async function adminRoutes(fastify, options) {
         return { success: true, message: 'User blocked successfully' };
     });
 
+    // Assign Team to User
+    fastify.post('/users/:id/assign-team', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {
+        const { teamId } = request.body; // teamId can be null to unassign
+        const user = await User.findById(request.params.id);
+        if (!user) return reply.code(404).send({ success: false, message: 'User not found' });
+
+        if (teamId) {
+            const team = await Team.findById(teamId);
+            if (!team) return reply.code(404).send({ success: false, message: 'Team not found' });
+            user.teamId = teamId;
+        } else {
+            user.teamId = null;
+        }
+
+        await user.save();
+
+        // Audit Log
+        if (request.ip) {
+            await AuditLog.create({
+                adminId: request.authAdmin.username,
+                userType: 'ADMIN',
+                action: 'ASSIGN_TEAM',
+                details: `Assigned user ${user.email} to team ${teamId || 'None'}`,
+                ipAddress: request.ip,
+                userAgent: request.headers['user-agent']
+            });
+        }
+
+        return { success: true, message: 'Team assigned successfully', user };
+    });
+
     // --- WHITELIST MANAGEMENT ---
 
     fastify.get('/whitelist', { onRequest: [fastify.authenticateAdmin] }, async (request, reply) => {

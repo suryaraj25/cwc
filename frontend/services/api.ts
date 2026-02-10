@@ -301,6 +301,11 @@ export const api = {
         return res.data;
     },
 
+    assignTeam: async (userId: string, teamId: string | null): Promise<any> => {
+        const res = await apiClient.post(`/admin/users/${userId}/assign-team`, { teamId });
+        return res.data;
+    },
+
     blockUser: async (userId: string, reason?: string): Promise<any> => {
         const res = await apiClient.post(`/admin/users/${userId}/block`, {
             reason,

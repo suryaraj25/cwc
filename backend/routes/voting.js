@@ -35,6 +35,15 @@ async function votingRoutes(fastify, options) {
             }
         }
 
+
+
+        // 2.1 Check Self-Voting (Backend Enforcement)
+        if (user.teamId) {
+            if (votes[user.teamId.toString()] > 0) {
+                return reply.code(403).send({ success: false, message: 'You cannot vote for your own team.' });
+            }
+        }
+
         // 3. Calculate Votes Used Today
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);

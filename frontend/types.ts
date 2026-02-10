@@ -14,6 +14,7 @@ export interface User {
   lastVotedAt?: string;
   currentSessionToken?: string;
   mustChangePassword?: boolean;
+  teamId?: string | null;
 }
 
 export interface Team {
