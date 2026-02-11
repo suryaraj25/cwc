@@ -18,8 +18,8 @@ fastify.register(require('@fastify/cookie'), {
 
 // Rate Limiting
 fastify.register(require('@fastify/rate-limit'), {
-    max: 100,
-    timeWindow: '1 minute'
+    max: parseInt(process.env.RATE_LIMIT_MAX) || 10000,
+    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute'
 });
 
 fastify.register(fastifyStatic, {
@@ -51,7 +51,9 @@ fastify.register(require('./middleware/authMiddleware'));
 // Database Connection
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGODB_URI);
+        const conn = await mongoose.connect(process.env.MONGODB_URI, {
+            maxPoolSize: 500, // Increased for 400+ concurrent users
+        });
         fastify.log.info(`MongoDB Connected: ${conn.connection.host}`);
     } catch (err) {
         fastify.log.error(err);
