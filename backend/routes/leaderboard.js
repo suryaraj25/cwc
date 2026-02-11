@@ -16,16 +16,28 @@ async function leaderboardRoutes(fastify, options) {
                     .sort({ date: -1 })
                     .lean();
 
-                const totalScore = await TeamScore.aggregate([
+                const totalScoreAggregation = await TeamScore.aggregate([
                     { $match: { teamId: team._id } },
-                    { $group: { _id: null, total: { $sum: '$score' } } }
+                    {
+                        $group: {
+                            _id: null,
+                            total: { $sum: '$score' },
+                            advantage: { $sum: '$advantage' },
+                            main: { $sum: '$main' },
+                            special: { $sum: '$special' },
+                            elimination: { $sum: '$elimination' },
+                            immunity: { $sum: '$immunity' }
+                        }
+                    }
                 ]);
+
 
                 const studentVotes = await VoteTransaction.aggregate([
                     { $match: { teamId: team._id } },
                     { $group: { _id: null, total: { $sum: '$votes' } } }
                 ]);
 
+                const adminScore = totalScoreAggregation[0]?.total || 0;
                 const totalStudentVotes = studentVotes[0]?.total || 0;
 
                 return {
@@ -33,7 +45,15 @@ async function leaderboardRoutes(fastify, options) {
                     name: team.name,
                     description: team.description,
                     imageUrl: team.imageUrl,
-                    totalScore: (totalScore[0]?.total || 0) + totalStudentVotes,
+                    totalScore: adminScore,
+                    score: adminScore,
+                    adminScore: adminScore,
+                    studentVotes: totalStudentVotes,
+                    advantage: totalScoreAggregation[0]?.advantage || 0,
+                    main: totalScoreAggregation[0]?.main || 0,
+                    special: totalScoreAggregation[0]?.special || 0,
+                    elimination: totalScoreAggregation[0]?.elimination || 0,
+                    immunity: totalScoreAggregation[0]?.immunity || 0,
                     lastScore: latestScore?.score || 0,
                     lastUpdated: latestScore?.date || null
                 };
@@ -72,14 +92,24 @@ async function leaderboardRoutes(fastify, options) {
 
         const leaderboardData = await Promise.all(
             teams.map(async (team) => {
-                const totalScore = await TeamScore.aggregate([
+                const totalScoreAggregation = await TeamScore.aggregate([
                     {
                         $match: {
                             teamId: team._id,
                             ...(Object.keys(dateQuery).length > 0 && { date: dateQuery })
                         }
                     },
-                    { $group: { _id: null, total: { $sum: '$score' } } }
+                    {
+                        $group: {
+                            _id: null,
+                            total: { $sum: '$score' },
+                            advantage: { $sum: '$advantage' },
+                            main: { $sum: '$main' },
+                            special: { $sum: '$special' },
+                            elimination: { $sum: '$elimination' },
+                            immunity: { $sum: '$immunity' }
+                        }
+                    }
                 ]);
 
                 const studentVotes = await VoteTransaction.aggregate([
@@ -92,6 +122,7 @@ async function leaderboardRoutes(fastify, options) {
                     { $group: { _id: null, total: { $sum: '$votes' } } }
                 ]);
 
+                const adminScore = totalScoreAggregation[0]?.total || 0;
                 const totalStudentVotes = studentVotes[0]?.total || 0;
 
                 return {
@@ -99,7 +130,15 @@ async function leaderboardRoutes(fastify, options) {
                     name: team.name,
                     description: team.description,
                     imageUrl: team.imageUrl,
-                    totalScore: (totalScore[0]?.total || 0) + totalStudentVotes
+                    totalScore: adminScore + totalStudentVotes,
+                    score: adminScore + totalStudentVotes,
+                    adminScore: adminScore,
+                    studentVotes: totalStudentVotes,
+                    advantage: totalScoreAggregation[0]?.advantage || 0,
+                    main: totalScoreAggregation[0]?.main || 0,
+                    special: totalScoreAggregation[0]?.special || 0,
+                    elimination: totalScoreAggregation[0]?.elimination || 0,
+                    immunity: totalScoreAggregation[0]?.immunity || 0
                 };
             })
         );
@@ -159,6 +198,7 @@ async function leaderboardRoutes(fastify, options) {
                     description: team.description,
                     imageUrl: team.imageUrl,
                     score: (score?.score || 0) + totalStudentVotes,
+                    totalScore: (score?.score || 0) + totalStudentVotes,
                     advantage: score?.advantage || 0,
                     main: score?.main || 0,
                     special: score?.special || 0,
