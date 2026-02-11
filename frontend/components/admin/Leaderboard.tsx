@@ -195,53 +195,49 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ config }) => {
                   )}
                 </div>
               </div>
-              {/* Breakdown Display - Now visible to everyone, but VOTES only for ADMINS */}
-              <div className="px-4 pb-4">
-                <div
-                  className={`grid ${role === UserRole.ADMIN ? "grid-cols-6" : "grid-cols-5"} gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-700/30`}
-                >
-                  <div className="flex flex-col items-center border-r border-slate-700/50">
-                    <span className="font-bold text-indigo-400">ADV</span>
-                    <span className="text-white font-mono">
-                      {team.advantage || 0}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center border-r border-slate-700/50">
-                    <span className="font-bold text-indigo-400">MAIN</span>
-                    <span className="text-white font-mono">
-                      {team.main || 0}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center border-r border-slate-700/50">
-                    <span className="font-bold text-indigo-400">SPL</span>
-                    <span className="text-white font-mono">
-                      {team.special || 0}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-center border-r border-slate-700/50">
-                    <span className="font-bold text-indigo-400">ELIM</span>
-                    <span className="text-white font-mono">
-                      {team.elimination || 0}
-                    </span>
-                  </div>
-                  <div
-                    className={`flex flex-col items-center ${role === UserRole.ADMIN ? "border-r border-slate-700/50" : ""}`}
-                  >
-                    <span className="font-bold text-indigo-400">IMM</span>
-                    <span className="text-white font-mono">
-                      {team.immunity || 0}
-                    </span>
-                  </div>
-                  {role === UserRole.ADMIN && (
+              {/* Breakdown Display - Only visible to ADMINS */}
+              {role === UserRole.ADMIN && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-6 gap-1 text-[10px] sm:text-xs text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-700/30">
+                    <div className="flex flex-col items-center border-r border-slate-700/50">
+                      <span className="font-bold text-indigo-400">ADV</span>
+                      <span className="text-white font-mono">
+                        {team.advantage || 0}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center border-r border-slate-700/50">
+                      <span className="font-bold text-indigo-400">MAIN</span>
+                      <span className="text-white font-mono">
+                        {team.main || 0}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center border-r border-slate-700/50">
+                      <span className="font-bold text-indigo-400">SPL</span>
+                      <span className="text-white font-mono">
+                        {team.special || 0}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center border-r border-slate-700/50">
+                      <span className="font-bold text-indigo-400">ELIM</span>
+                      <span className="text-white font-mono">
+                        {team.elimination || 0}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center border-r border-slate-700/50">
+                      <span className="font-bold text-indigo-400">IMM</span>
+                      <span className="text-white font-mono">
+                        {team.immunity || 0}
+                      </span>
+                    </div>
                     <div className="flex flex-col items-center">
                       <span className="font-bold text-green-500">VOTES</span>
                       <span className="text-white font-mono">
                         {team.studentVotes || 0}
                       </span>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
           ))
         )}
