@@ -12,7 +12,7 @@ import { UserPlus, LogIn, Lock, AlertCircle, KeyRound } from "lucide-react";
 
 interface StudentAuthProps {}
 
-const BITS_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BITS_EMAIL_REGEX = /^[a-z0-9]+\.[a-z]+\d{2}@bitsathy\.ac\.in$/i;
 
 export const StudentAuth: React.FC<StudentAuthProps> = () => {
   const { login } = useAuthStore();
@@ -107,7 +107,9 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
         if (!formData.rollNo || !formData.email || !formData.name)
           throw new Error("All fields are required");
         if (!BITS_EMAIL_REGEX.test(formData.email)) {
-          throw new Error("Invalid email format.");
+          throw new Error(
+            "Invalid email format. Please use college ID format (e.g., name.deptYear@bitsathy.ac.in)",
+          );
         }
         const result = await api.register({
           name: formData.name,
@@ -155,7 +157,9 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
       } else {
         // Login
         if (!BITS_EMAIL_REGEX.test(formData.email)) {
-          throw new Error("Invalid email format.");
+          throw new Error(
+            "Invalid email format. Please use college ID format (e.g., name.deptYear@bitsathy.ac.in)",
+          );
         }
         const result = await api.login(
           formData.rollNo || formData.email,
@@ -339,7 +343,7 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="student@example.com"
+                placeholder="name.deptYear@bitsathy.ac.in"
                 required
               />
               <div className="grid grid-cols-2 gap-4">
@@ -384,7 +388,7 @@ export const StudentAuth: React.FC<StudentAuthProps> = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter Email"
+                placeholder="name.deptYear@bitsathy.ac.in"
                 required
               />
               <Input
