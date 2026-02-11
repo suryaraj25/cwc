@@ -45,9 +45,17 @@ async function votingRoutes(fastify, options) {
                     });
                     const votesUsed = slotTransactions.reduce((sum, t) => sum + t.votes, 0);
 
+                    // Calculate per-team usage in this slot/boundary
+                    const votesByTeam = {};
+                    slotTransactions.forEach(t => {
+                        const tid = t.teamId.toString();
+                        votesByTeam[tid] = (votesByTeam[tid] || 0) + t.votes;
+                    });
+
                     userSpecificData = {
-                        votesUsedToday: votesUsed, // Keeping the field name to avoid frontend breaking
-                        remainingToday: (config.dailyQuota || 100) - votesUsed
+                        votesUsedToday: votesUsed,
+                        remainingToday: (config.dailyQuota || 100) - votesUsed,
+                        votesByTeamInSlot: votesByTeam
                     };
                 }
             } catch (e) {
@@ -171,6 +179,22 @@ async function votingRoutes(fastify, options) {
 
         if (totalNewVotes === 0) {
             return reply.code(400).send({ success: false, message: `You must cast at least one vote.` });
+        }
+
+        // 4.1 Check Per-Team Limit (max 15)
+        for (const [teamId, count] of Object.entries(votes)) {
+            if (count > 0) {
+                const teamVotesInSlot = slotTransactions
+                    .filter(t => t.teamId.toString() === teamId)
+                    .reduce((sum, t) => sum + t.votes, 0);
+
+                if (teamVotesInSlot + count > 15) {
+                    return reply.code(400).send({
+                        success: false,
+                        message: `Max 15 votes per team allowed. You have already cast ${teamVotesInSlot} votes for this team.`
+                    });
+                }
+            }
         }
 
         if ((votesUsedToday + totalNewVotes) > DAILY_QUOTA) {

@@ -16,8 +16,15 @@ const apiClient = axios.create({
 export const api = {
     // Auth
     register: async (userData: any): Promise<{ success: boolean; message: string; user?: User }> => {
-        const res = await apiClient.post(`/auth/register`, userData);
-        return res.data;
+        try {
+            const res = await apiClient.post(`/auth/register`, userData);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Registration failed', user: undefined };
+        }
     },
 
     login: async (identifier: string, passwordHash: string): Promise<{ success: boolean; message: string; user?: User; token?: string }> => {
@@ -111,13 +118,27 @@ export const api = {
     },
 
     addTeam: async (team: any): Promise<Team> => {
-        const res = await apiClient.post(`/teams`, team);
-        return res.data;
+        try {
+            const res = await apiClient.post(`/teams`, team);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 
     updateTeam: async (id: string, updates: any): Promise<Team> => {
-        const res = await apiClient.put(`/teams/${id}`, updates);
-        return res.data;
+        try {
+            const res = await apiClient.put(`/teams/${id}`, updates);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 
     deleteTeam: async (id: string): Promise<void> => {
@@ -133,8 +154,15 @@ export const api = {
     },
 
     castVote: async (userId: string, votes: Record<string, number>): Promise<{ success: boolean; message: string }> => {
-        const res = await apiClient.post(`/voting/cast`, { userId, votes });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/voting/cast`, { userId, votes });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to cast votes' };
+        }
     },
 
     // Admin
@@ -144,8 +172,15 @@ export const api = {
     },
 
     updateConfig: async (config: any): Promise<VotingConfig> => {
-        const res = await apiClient.post(`/admin/config`, config);
-        return res.data;
+        try {
+            const res = await apiClient.post(`/admin/config`, config);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            throw error;
+        }
     },
 
     revokeDevice: async (userId: string): Promise<{ success: boolean }> => {
@@ -164,8 +199,15 @@ export const api = {
     },
 
     resetPassword: async (userId: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
-        const res = await apiClient.post(`/admin/reset-password`, { userId, newPassword });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/admin/reset-password`, { userId, newPassword });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to reset password' };
+        }
     },
 
     deleteUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
@@ -174,8 +216,15 @@ export const api = {
     },
 
     forceLogoutUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
-        const res = await apiClient.post(`/admin/logout-user`, { userId });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/admin/logout-user`, { userId });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Logout failed' };
+        }
     },
 
     // Admin Management
@@ -185,8 +234,15 @@ export const api = {
     },
 
     createAdmin: async (data: any): Promise<{ success: boolean; message: string; admin: any }> => {
-        const res = await apiClient.post('/admin/admins', data);
-        return res.data;
+        try {
+            const res = await apiClient.post('/admin/admins', data);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to create admin', admin: undefined };
+        }
     },
 
     deleteAdmin: async (adminId: string): Promise<{ success: boolean; message: string }> => {
@@ -195,8 +251,15 @@ export const api = {
     },
 
     resetAdminPassword: async (adminId: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
-        const res = await apiClient.post('/admin/admins/reset-password', { adminId, newPassword });
-        return res.data;
+        try {
+            const res = await apiClient.post('/admin/admins/reset-password', { adminId, newPassword });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to reset admin password' };
+        }
     },
 
     forceLogoutAdmin: async (adminId: string): Promise<{ success: boolean; message: string }> => {
@@ -240,10 +303,16 @@ export const api = {
         return res.data;
     },
 
-    // Admin: Leaderboard Management
     submitTeamScore: async (teamId: string, scores: { advantage: number, main: number, special: number, elimination: number, immunity: number }, date?: string, notes?: string): Promise<any> => {
-        const res = await apiClient.post(`/leaderboard/scores`, { teamId, ...scores, date, notes });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/leaderboard/scores`, { teamId, ...scores, date, notes });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to submit score' };
+        }
     },
 
     getAdminScores: async (teamId?: string, startDate?: string, endDate?: string, page = 1, limit = 20): Promise<any> => {
@@ -271,8 +340,15 @@ export const api = {
     },
 
     addToWhitelist: async (emails: string[]): Promise<any> => {
-        const res = await apiClient.post("/admin/whitelist", { emails });
-        return res.data;
+        try {
+            const res = await apiClient.post("/admin/whitelist", { emails });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to whitelist emails' };
+        }
     },
 
     removeFromWhitelist: async (id: string): Promise<any> => {
@@ -298,8 +374,15 @@ export const api = {
     },
 
     approveUser: async (userId: string): Promise<any> => {
-        const res = await apiClient.post(`/admin/users/${userId}/approve`);
-        return res.data;
+        try {
+            const res = await apiClient.post(`/admin/users/${userId}/approve`);
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to approve user' };
+        }
     },
 
     assignTeam: async (userId: string, teamId: string | null): Promise<any> => {
@@ -308,9 +391,16 @@ export const api = {
     },
 
     blockUser: async (userId: string, reason?: string): Promise<any> => {
-        const res = await apiClient.post(`/admin/users/${userId}/block`, {
-            reason,
-        });
-        return res.data;
+        try {
+            const res = await apiClient.post(`/admin/users/${userId}/block`, {
+                reason,
+            });
+            return res.data;
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                return error.response.data;
+            }
+            return { success: false, message: error.message || 'Failed to block user' };
+        }
     },
 };

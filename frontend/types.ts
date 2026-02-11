@@ -44,6 +44,7 @@ export interface VotingConfig {
   nextSlot?: Slot;
   votesUsedToday?: number;
   remainingToday?: number;
+  votesByTeamInSlot?: Record<string, number>;
 }
 
 export interface DeviceRegistry {

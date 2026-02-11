@@ -147,10 +147,17 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
     if (!config.isSessionLive) return;
 
     const current = votes[teamId] || 0;
+    const serverAlreadyCast = config.votesByTeamInSlot?.[teamId] || 0;
     const next = current + delta;
 
     if (next < 0) return;
     if (delta > 0 && remaining <= 0) return;
+
+    // Enforcement: Max 15 per team per session
+    if (delta > 0 && serverAlreadyCast + next > 15) {
+      toast.error("Max 15 votes per team allowed.");
+      return;
+    }
 
     setVotes((prev) => ({ ...prev, [teamId]: next }));
     setMessage(null);
@@ -340,14 +347,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {teams.map((team) => {
                 const currentVotes = votes[team.id] || 0;
-                const userVotesForTeam =
-                  (user?.votes && user.votes[team.id]) || 0;
+                const sessionVotesForTeam =
+                  (config.votesByTeamInSlot &&
+                    config.votesByTeamInSlot[team.id]) ||
+                  0;
                 return (
                   <TeamVoteCard
                     key={team.id}
                     team={team}
                     currentVotes={currentVotes}
-                    userTotalVotes={userVotesForTeam}
+                    userTotalVotes={sessionVotesForTeam}
                     handleVoteChange={handleVoteChange}
                     remaining={remaining}
                   />
