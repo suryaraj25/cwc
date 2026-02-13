@@ -1,5 +1,6 @@
 const VoteTransaction = require('../models/VoteTransaction');
 const Config = require('../models/Config');
+const User = require('../models/User');
 
 async function votingRoutes(fastify, options) {
 
@@ -9,11 +10,18 @@ async function votingRoutes(fastify, options) {
 
         // Check for Auth Header manually since this is a public route
         // This allows the frontend to fetch config + user status in one go or separately
-        const token = request.headers.authorization?.split(' ')[1];
+        let token = request.headers.authorization?.split(' ')[1];
+
+        // If no header token, check cookie
+        if (!token && request.cookies.cwc_voting_token) {
+            token = request.cookies.cwc_voting_token;
+        }
+
         if (token) {
             try {
                 const decoded = fastify.jwt.verify(token);
-                const user = await fastify.mongo.AuthUser.findById(decoded.id);
+                // Fix: Use User model and correct payload field (userId)
+                const user = await User.findById(decoded.userId);
                 if (user) {
                     const config = await Config.findOne() || new Config();
 

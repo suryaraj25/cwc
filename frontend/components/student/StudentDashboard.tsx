@@ -102,7 +102,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
           await api.checkSession();
         if (refreshedUser) {
           setUser(refreshedUser);
-          if (votesUsedToday !== undefined) {
+          // Prefer configData.votesUsedToday as it's more "slot-aware" in the backend logic
+          if (configData.votesUsedToday !== undefined) {
+            setServerUsedVotes(configData.votesUsedToday);
+          } else if (votesUsedToday !== undefined) {
             setServerUsedVotes(votesUsedToday);
           }
         }
@@ -261,19 +264,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = () => {
             </Card>
 
             <Card className="bg-slate-800 border-slate-700">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase">
+              <div className="flex justify-between items-center gap-4">
+                <div className="flex-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
                     {config.activeSlotLabel ? "Slot Quota" : "Daily Quota"}
                   </p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-xl font-bold text-white">
                     {config.dailyQuota}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-400 uppercase">Remaining</p>
+                <div className="flex-1 text-center border-x border-slate-700/50 px-2">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                    Votes Cast
+                  </p>
+                  <p className="text-xl font-bold text-indigo-400">
+                    {totalUsed}
+                  </p>
+                </div>
+                <div className="flex-1 text-right">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                    Remaining
+                  </p>
                   <p
-                    className={`text-4xl font-bold ${remaining < 10 ? "text-red-500" : "text-green-500"}`}
+                    className={`text-2xl font-black ${remaining < 10 ? "text-red-500" : "text-green-500"}`}
                   >
                     {remaining}
                   </p>
